@@ -188,15 +188,15 @@ int main()
 	//deleteTreeNode(&pParentNode, 3);
 	//printf("Delete data 2\n");
 	//deleteTreeNode(&pParentNode, 2);
-	printf("Delete data 4\n");
-	deleteTreeNode(&pParentNode, 4);
+	printf("Delete data 6\n");
+	deleteTreeNode(&pParentNode, 6);
 
 	///Search Data in Tree(pParentNode) 
-	printf("Search Data 4\n");
-	if (searchTreeNode(pParentNode, 4) != NULL)
-		printf("4 is existed\n\n");
+	printf("Search Data 6\n");
+	if (searchTreeNode(pParentNode, 6) != NULL)
+		printf("6 is existed\n\n");
 	else
-		printf("4 is not existed\n\n");
+		printf("6 is not existed\n\n");
 
 	///Print Data in Tree(pParentNode)
 	printf("Tree(pParentNode)\n");
@@ -219,7 +219,7 @@ int main()
 	printf("\nPostorder\t:");
 	printTreePostorder(cParentNode);
 	printf("\n\n");
-	
+
 	///Compare Data between two Trees
 	if (compareTwoTree(pParentNode, cParentNode))
 		printf("Two trees are equal\n");
