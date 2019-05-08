@@ -125,8 +125,6 @@ void copyTreeNode(Node* src, Node** dst) {
 	if(src != NULL) {
 		*dst = (Node*) malloc(sizeof(Node*));
 		(*dst)->data = src->data;
-		(*dst)->leftChild = src->leftChild;
-		(*dst)->rightChild = src->rightChild;
 
 		copyTreeNode(src->rightChild, &((*dst)->rightChild));
 		copyTreeNode(src->leftChild, &((*dst)->leftChild));
