@@ -78,7 +78,7 @@ int getMinDist(int n) {
 	int pos;
 	int minDist = INF;
 
-	for(int i = 0; i < n; i++) {
+	for(i = 0; i < n; i++) {
 		if(minDist > dist[i] && !check[i]) {
 			minDist = dist[i];
 			pos = i;
