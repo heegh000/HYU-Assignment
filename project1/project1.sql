@@ -2,7 +2,7 @@
 SELECT name
 FROM Pokemon
 WHERE type = 'Grass'
-ORDER BY type;
+ORDER BY name;
 
 #2. Brown City나 Rainbow City 출신 트레이너의 이름을 사전순으로 출력하세요
 SELECT name
@@ -81,8 +81,8 @@ WHERE id = leader_id
 	AND description = 'Amazon';
 
 #13. 불속성 포켓몬을 가장 많이 잡은 트레이너의 id와, 그 트레이너가 잡은 불속성 포켓몬의 수를 출력하세요                       
-SELECT fire.fire_num_name, fire.fire_num 
-FROM (SELECT Trainer.name AS fire_num_name, COUNT(*) AS fire_num
+SELECT fire.fire_num_id, fire.fire_num 
+FROM (SELECT Trainer.id AS fire_num_id, COUNT(*) AS fire_num
 	FROM CatchedPokemon, Pokemon, Trainer
 	WHERE pid = Pokemon.id AND type = 'Fire' AND owner_id = Trainer.id
 	GROUP BY owner_id) AS fire
@@ -93,7 +93,7 @@ WHERE fire.fire_num >= ALL(SELECT COUNT(*)
 
 
 #14. 포켓몬 ID가 한 자리 수인 포켓몬의 type을 중복 없이 포켓몬 ID의 내림차순으로 출력하세요
-SELECT type
+SELECT DISTINCT type
 FROM Pokemon
 WHERE id < 10
 ORDER BY id DESC;
@@ -147,7 +147,7 @@ WHERE avg_level >= ALL (
 #20. 같은 출신이 없는 트레이너들이 잡은 포켓몬중 진화가 가능하고 Electric 속성을 가진 포켓몬의 이름을 출력하세요
 SELECT Pokemon.name
 FROM CatchedPokemon, Pokemon,
-     (SELECT DISTINCT Pokemon.id as elect_evol_id
+     (SELECT DISTINCT Pokemon.before_id as elect_evol_id
       FROM Pokemon, Evolution
       WHERE type = 'Electric'
             AND (Pokemon.id = before_id OR Pokemon.id = after_id)
