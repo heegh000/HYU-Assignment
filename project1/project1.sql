@@ -103,7 +103,6 @@ SELECT COUNT(id)
 FROM Pokemon
 WHERE NOT type = 'Fire';
 
-
 #16. 진화하면 id가 작아지는 포켓몬의 진화 전 이름을 사전순으로 출력하세요
 SELECT name
 FROM Pokemon, Evolution
@@ -147,7 +146,7 @@ WHERE avg_level >= ALL (
 #20. 같은 출신이 없는 트레이너들이 잡은 포켓몬중 진화가 가능하고 Electric 속성을 가진 포켓몬의 이름을 출력하세요
 SELECT Pokemon.name
 FROM CatchedPokemon, Pokemon,
-     (SELECT DISTINCT Pokemon.before_id as elect_evol_id
+     (SELECT DISTINCT Evolution.before_id as elect_evol_id
       FROM Pokemon, Evolution
       WHERE type = 'Electric'
             AND (Pokemon.id = before_id OR Pokemon.id = after_id)
@@ -182,7 +181,7 @@ FROM (SELECT COUNT(*) AS home_num, Trainer.hometown as home_name
       GROUP BY hometown) as home_num_table
 WHERE home_num >= ALL(SELECT COUNT(*)
                       FROM Trainer
-                      GROUP BY hometown)
+                      GROUP BY hometown);
 
 #23. Sangnok City 출신 트레이너와 Brown City 출신 트레이너가 공통으로 잡은 포켓몬의 이름을 중복을 제거하여 사전순으로 출력하세요
 SELECT DISTINCT Pokemon.name
@@ -275,8 +274,6 @@ WHERE owner_id = Trainer.id
 GROUP BY Trainer.hometown
 ORDER BY Max(level) DESC;
 
-
-
 #31. 포켓몬 중 3단 진화가 가능한 포켓몬의 ID 와 해당 포켓몬의이름을 1단진화 형태 포켓몬의이름, 2단 진화 형태 포켓몬의 이름, 3단 진화 형태 포켓몬의 이름을 ID 의 오름차순으로 출력하세요
 SELECT evo_id1,
        (SELECT name FROM Pokemon WHERE id = evo_id1),
@@ -287,3 +284,4 @@ FROM (SELECT evo1.before_id AS evo_id1, evo2.before_id AS evo_id2, evo2.after_id
       WHERE evo1.after_id = evo2.before_id
       ORDER BY evo1.before_id) AS three_evo
 ORDER BY evo_id1;
+
