@@ -97,8 +97,10 @@ pagenum_t find_leaf(int64_t key) {
 	file_read_page(0, page);
 
 	//root가 없는 경우 헤더페이지 번호 반환
-	if (page->num_of_page == 1)
+	if (page->num_of_page == 1) {
+		free(page);
 		return 0;
+	}
 
 	page_num = page->root_page_num;
 
@@ -134,6 +136,11 @@ pagenum_t find_leaf(int64_t key) {
 int db_find(int64_t key, char * ret_val) {
 	int i = 0;
 
+	if(ret_val == NULL) {
+		printf("ret_val must be allocated\n");
+		return -1;
+	}
+
 	page_t* page = (page_t*)malloc(sizeof(page_t));
 	
 	if (page == NULL) {
@@ -144,8 +151,10 @@ int db_find(int64_t key, char * ret_val) {
 	pagenum_t page_num = find_leaf(key);
 
 	// root가 없는 경우 실패
-	if (page_num == 0)
+	if (page_num == 0) {
+		free(page);
 		return -1;
+	}
 
 	file_read_page(page_num, page);
 
@@ -155,10 +164,14 @@ int db_find(int64_t key, char * ret_val) {
 
 
 	// 찾는 키가 없을 경우 실패
-	if (i == page->num_of_key)
+	if (i == page->num_of_key) {
+		free(page);
 		return -1;
+	}
 
 	strcpy(ret_val, page->record[i].value);
+	
+	free(page);
 
 	return 0;
 }
@@ -277,6 +290,7 @@ int insert_into_leaf_after_splitting(page_t* target_page, record_t* record) {
 
 	if (temp_records == NULL) {
 		printf("insert_into_leaf_after_splitting() dynamic allocation error\n");
+		free(new_page);
 		return -1;
 	}
 
@@ -365,6 +379,7 @@ int insert_into_internal_after_splitting(page_t* target_page, int insertion_inde
 
 	if (temp_internals == NULL) {
 		printf("insert_into_internal_after_splitting() dynamic allocation error\n");
+		free(new_page);
 		return -1;
 	}
 
@@ -406,6 +421,8 @@ int insert_into_internal_after_splitting(page_t* target_page, int insertion_inde
 
 	if (child_page == NULL) {
 		printf("insert_into_internal_after_splitting() dynamic allocation error\n");
+		free(new_page);
+		free(temp_internals);
 		return -1;
 	}
 
@@ -451,11 +468,13 @@ int insert_into_parent(page_t* left_child_page, int64_t key, pagenum_t right_chi
 
 		if (right_child_page == NULL) {
 			printf("insert_into_parent() dynamic allocation error\n");
+			free(parent_page);
 			return -1;
 		}
 
 		file_read_page(right_child_page_num, right_child_page);
 		success = insert_into_new_root(left_child_page, key, right_child_page);
+		free(parent_page);
 		free(right_child_page);
 		return success;
 	}
@@ -498,6 +517,7 @@ int insert_into_new_root(page_t* left_child_page, int64_t key, page_t* right_chi
 	page_t* header_page = (page_t*)malloc(sizeof(page_t));
 	if (header_page == NULL) {
 		printf("insert_into_new_root() dynamic allocation error\n");
+		free(root_page);
 		return -1;
 	}
 
@@ -537,6 +557,7 @@ int start_new_tree(record_t* record) {
 	
 	if (header_page == NULL) {
 		printf("start_new_tree() dynamic allocation error\n");
+		free(root_page);
 		return -1;
 	}
 
@@ -591,6 +612,8 @@ int db_insert(int64_t key, char * value) {
 
 	if (target_page == NULL) {
 		printf("db_insert() dynamic allocation error\n");
+		free(record);
+		free(header_page);
 		return -1;
 	}
 
@@ -690,6 +713,7 @@ int adjust_root(page_t* root_page) {
 
 		if (new_root_page == NULL) {
 			printf("adjust_root() dynamic allocation error\n");
+			free(header_page);
 			return -1;
 		}
 
@@ -828,6 +852,7 @@ int redistribute_page(page_t* target_page, page_t* neighbor_page, int neighbor_i
 
 			if (last_child_page == NULL) {
 				printf("redistribute_page() dynamic allocation error\n");
+				free(parent_page);
 				return -1;
 			}
 
@@ -871,6 +896,7 @@ int redistribute_page(page_t* target_page, page_t* neighbor_page, int neighbor_i
 
 			if (first_child_page == NULL) {
 				printf("redistribute_page() dynamic allocation error\n");
+				free(parent_page);
 				return -1;
 			}
 
@@ -949,6 +975,7 @@ int delete_entry(page_t* target_page, int64_t key) {
 
 	if (parent_page == NULL) {
 		printf("delete_entry() dynamic allocation error\n");
+		free(header_page);
 		return -1;
 	}
 
@@ -956,6 +983,8 @@ int delete_entry(page_t* target_page, int64_t key) {
 
 	if (neighbor_page == NULL) {
 		printf("delete_entry() dynamic allocation error\n");
+		free(header_page);
+		free(parent_page);
 		return -1;
 	}
 
@@ -1025,6 +1054,7 @@ int db_delete(int64_t key) {
 
 	if (target_page == NULL) {
 		printf("db_delete() dynamic allocation error\n");
+		free(value);
 		return -1;
 	}
 
@@ -1033,6 +1063,7 @@ int db_delete(int64_t key) {
 	int success = delete_entry(target_page, key);
 
 	free(target_page);
+	free(value);
 
 	return success;
 }

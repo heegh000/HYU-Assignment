@@ -31,8 +31,12 @@ int main() {
 		}
 		else if(choice == 'd') {
 			int64_t key;
+			int64_t key2;
 			scanf("%ld", &key);
 			getchar();
+			scanf("%ld", &key2);
+			getchar();
+
 			if(db_delete(key) != 0)
 				printf("delete fail\n");		
 
