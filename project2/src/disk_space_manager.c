@@ -18,7 +18,8 @@ pagenum_t file_alloc_page() {
 		page_t free_page;
 		free_page.is_leaf = 1;
 		free_page.num_of_key = 0;
-
+		free_page.right_sibling_num = 0;
+		
 		//100개씩 free page 추가
 		for (int i = 0; i < 99; i++) {
 			free_page.parent_page_num = num_of_page + 1 + i;
