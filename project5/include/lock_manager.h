@@ -19,6 +19,7 @@ typedef struct trx_t {
 	int trx_id;
 	enum trx_state state;
 	list<struct lock_t*> trx_locks;
+	int num_of_access;
 	struct lock_t* wait_lock;
 
 } trx_t;

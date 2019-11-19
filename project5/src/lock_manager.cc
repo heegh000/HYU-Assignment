@@ -14,7 +14,7 @@ int begin_trx() {
 	trx_num++;
 	new_trx->state = IDLE;
 	new_trx->wait_lock = NULL;
-
+	new_trx->num_of_access = 0;
 	trx_list.push_back(new_trx);
 
 	pthread_mutex_unlock(&trx_id_lock);
