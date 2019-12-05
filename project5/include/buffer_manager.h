@@ -3,7 +3,14 @@
 
 #include "disk_space_manager.h"
 #include <stdlib.h>
+#include <pthread.h>
 
+struct meatadata_t;
+struct buffer_t;
+
+extern buffer_t* buffer;
+extern int num_of_buffer; 
+extern pthread_mutex_t buffer_pool_mutex;
 
 typedef struct meatadata_t {
 
@@ -23,10 +30,14 @@ typedef struct buffer_t {
 		node_page_t node_page;
 		header_page_t header_page;
 	};
-
 	metadata_t metadata;
+	pthread_mutex_t buffer_page_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 } buffer_t;
+
+void buffer_page_lock(int buffer_index); 
+int buffer_page_trylock(int buffer_index);
+void buffer_page_unlock(int buffer_index); 
 
 buffer_t* get_buffer_pointer(int table_id, pagenum_t pagenum);
 int get_page_in_buffer(int table_id, pagenum_t pagenum);

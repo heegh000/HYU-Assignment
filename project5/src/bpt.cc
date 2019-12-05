@@ -1,10 +1,6 @@
 #include "bpt.h"
 
-int fd_arr[11] = {0,};
-buffer_t* buffer;
-int num_of_buffer;
-char* pathname_arr[11];
-
+char* pathname_arr[11] = {0, };
 
 
 void print_buffer(int buffer_index) {
@@ -96,6 +92,201 @@ void print_page(int table_id, pagenum_t page_num) {
 	printf("\nparentpage: %ld\n", page->parent_page_num);
 	printf("===============\n");
 	free(page);
+}
+
+
+int db_find(int table_id, int64_t key, char* ret_val, int trx_id) {	
+
+	page_t* leaf_page = (page_t*)malloc(sizeof(page_t));
+	pagenum_t leaf_page_num;
+	int buffer_index;
+
+	pthread_mutex_lock(&trx_table_mutex);
+
+	if(trx_table.find(trx_id) == trx_table.end()) {
+		free(leaf_page);
+		pthread_mutex_unlock(&trx_table_mutex);		
+		return -3;
+	}
+
+	pthread_mutex_unlock(&trx_table_mutex);
+
+	while(1) {
+
+		pthread_mutex_lock(&buffer_pool_mutex);		
+
+		leaf_page_num = find_leaf(table_id, key);
+
+		if(leaf_page_num == 0) {
+			pthread_mutex_unlock(&buffer_pool_mutex);
+			free(leaf_page);			
+			return -1;
+		}
+
+		buffer_index = buffer_read_page(table_id, leaf_page_num, leaf_page);
+
+		if(buffer_page_trylock(buffer_index) != 0) {
+			pthread_mutex_unlock(&buffer_pool_mutex);			
+			continue;	
+		}
+
+		pthread_mutex_unlock(&buffer_pool_mutex);
+
+		lock_state state = lock_record(table_id, key, leaf_page_num, SHARED, trx_id);
+		
+		pthread_mutex_lock(&trx_table_mutex);
+
+		unordered_map<int, trx_t*>::iterator map_it = trx_table.find(trx_id);
+	
+
+		if(state == RUN) {
+			map_it->second->state = RUNNING;
+			map_it->second->trx_wait_lock = NULL;
+			pthread_mutex_unlock(&trx_table_mutex);
+			break;
+		}
+
+		else if(state == WAIT) {
+			buffer_page_unlock(buffer_index);
+
+			map_it->second->state = WAITING;
+
+			pthread_cond_wait(&(map_it->second->trx_cond), &trx_table_mutex);
+			pthread_mutex_unlock(&trx_table_mutex);
+		}
+		
+		else if(state == DEADLOCK) {
+			printf("CCC");
+			abort_trx(trx_id);
+			return -2;
+		}
+
+	}
+
+	int i = 0;
+	for(i = 0; i < leaf_page->num_of_key; i++) {
+		if(key == leaf_page->record[i].key)
+			break;
+
+	}
+
+	if(i == leaf_page->num_of_key) {
+		buffer_page_unlock(buffer_index);
+		free(leaf_page);		
+		return -1;
+	}
+	else {
+		memcpy(ret_val, leaf_page->record[i].value, 120);
+		buffer_page_unlock(buffer_index);
+		free(leaf_page);		
+		return 0;
+	}
+}
+
+int db_update(int table_id, int64_t key, char* values, int trx_id){
+
+	
+	page_t* leaf_page = (page_t*)malloc(sizeof(page_t));
+	pagenum_t leaf_page_num;
+	int buffer_index;
+
+	
+	pthread_mutex_lock(&trx_table_mutex);
+
+	if(trx_table.find(trx_id) == trx_table.end()) {
+		free(leaf_page);
+		pthread_mutex_unlock(&trx_table_mutex);		
+		return -3;
+	}
+
+	pthread_mutex_unlock(&trx_table_mutex);
+	
+	while(1) {
+
+		pthread_mutex_lock(&buffer_pool_mutex);		
+
+		leaf_page_num = find_leaf(table_id, key);
+
+		if(leaf_page_num == 0) {
+			pthread_mutex_unlock(&buffer_pool_mutex);
+			free(leaf_page);
+			return -1;
+		}
+
+		buffer_index = buffer_read_page(table_id, leaf_page_num, leaf_page);
+
+		if(buffer_page_trylock(buffer_index) != 0) {
+			pthread_mutex_unlock(&buffer_pool_mutex);	
+			continue;	
+		}
+
+		pthread_mutex_unlock(&buffer_pool_mutex);
+
+		lock_state state = lock_record(table_id, key, leaf_page_num, EXCLUSIVE, trx_id);
+		
+		pthread_mutex_lock(&trx_table_mutex);
+
+		unordered_map<int, trx_t*>::iterator map_it = trx_table.find(trx_id);
+	
+		if(state == RUN) {
+			map_it->second->state = RUNNING;
+			map_it->second->trx_wait_lock = NULL;
+			pthread_mutex_unlock(&trx_table_mutex);
+			break;
+		}
+
+		else if(state == WAIT) {
+			buffer_page_unlock(buffer_index);
+			map_it->second->state = WAITING;
+
+			pthread_cond_wait(&(map_it->second->trx_cond), &trx_table_mutex);
+			pthread_mutex_unlock(&trx_table_mutex);
+		}
+		
+		else if(state == DEADLOCK) {
+			printf("BBB");
+			abort_trx(trx_id);
+			return -2;
+		}
+
+	}
+
+	int i = 0;
+	for(i = 0; i < leaf_page->num_of_key; i++) {
+		if(key == leaf_page->record[i].key)
+			break;
+
+	}
+
+	if(i == leaf_page->num_of_key) {
+		buffer_page_unlock(buffer_index);
+		free(leaf_page);		
+		return -1;
+	}
+	else {
+		log_t* log = new log_t;
+		log->page_num = leaf_page_num;
+		log->table_id = table_id;
+		log->key = key;
+		memcpy(log->old_value, leaf_page->record[i].value, 120);
+
+		memcpy(leaf_page->record[i].value, values,120);
+
+		pthread_mutex_lock(&buffer_pool_mutex);
+		buffer_write_page(table_id, leaf_page_num, leaf_page);
+		pthread_mutex_unlock(&buffer_pool_mutex);
+
+		pthread_mutex_lock(&trx_table_mutex);
+		unordered_map<int, trx_t*>::iterator map_it = trx_table.find(trx_id);
+		map_it->second->history.push_back(log);
+		pthread_mutex_unlock(&trx_table_mutex);
+
+	
+		buffer_page_unlock(buffer_index);
+		free(leaf_page);
+		
+		return 0;
+	}
 }
 
 

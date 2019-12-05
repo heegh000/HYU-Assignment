@@ -1,7 +1,7 @@
 #include "disk_space_manager.h"
 
-extern int fd_arr[11];
 
+int fd_arr[11] = {0, };
 
 /* free page list에서 free page의 페이지 번호를 반환해주는 함수
 */

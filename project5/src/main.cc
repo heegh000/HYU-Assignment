@@ -1,109 +1,79 @@
+
 #include "bpt.h"
+#define INPUT 10000
+#define PAGENUM 10000
+#include <time.h>
 
-extern int num_of_buffer;
-extern char* pathname_arr[11];
+void* func(void* arg)
+{
+	
+	char value[120];
+	int dead = 0;
+	int tid;
+	value[0] = 'b';
+	tid = begin_trx();
+	int who = 0;
+	printf("tid: %d\n",tid);
 
+		dead =db_find(1, 0, value, tid);
+
+		dead =db_update(1, 0, value, tid);
+		
+		printf("end %d\n", tid);
+		end_trx(tid);
+
+}
 int main() {
-	int i = 0;
-	while(1) {
+	pthread_t threads[3];
+	int a = 100;
+	int status;
+	
+	srand(time(NULL));
+	int random;
+	int who;
+	int num;
+	char* input_file = "chasanggod.dat";
+	char* input_file2 = "chasanggod";
+	char* input_file3 = "cc";	
+	char input2[120];
+	char str;
+	input2[0] = 'a';
+	//OPEN
+	init_db(1000);
+	open_table(input_file);
+	open_table(input_file2);
+	open_table(input_file3);
+	
+	//INSERT
+	for(int i = 0; i < INPUT; i++)
+	{
 
-		char choice[100]; 
-		
-		scanf("%s",choice);
-
-		if(strcmp(choice, "0") == 0) {
-
-			char path[100];
-			int table_id = 0;
-			scanf("%s", path);
-
-			table_id = open_table(path);
-
-			if(table_id == -1) {
-				printf("open fail\n");
-				continue;
-			}
-			printf("%d table open\n", table_id);
-		}
-
-		else if(strcmp(choice, "init") == 0) {
-			
-			int buffer_num;
-			scanf("%d", &buffer_num);
-		
-			init_db(buffer_num);
-
-		}
-
-		else if(strcmp(choice, "1") == 0) {
-			int table_id = 0;
-			int64_t key = 0;
-			char value[120] = {0, };
-
-			scanf("%d %ld %s", &table_id, &key, value);
-
-			if(db_insert(table_id, key, value) == -1)
-				printf("insert fail\n");
-			else if(i % 10000 == 0)
-				printf("insert %d success\n", i);
-			i++;
-
-		}
-
-		else if(strcmp(choice, "3") == 0) {
-			int table_id = 0;
-			int64_t key = 0;
-
-			scanf("%d %ld", &table_id, &key);
-
-			if(db_delete(table_id, key) == -1)
-				printf("delete fail\n");
-			else
-				printf("delete success\n");
-		}
-
-
-		else if(strcmp(choice, "5") == 0) {
-			int table_id1 = 0;
-			int table_id2 = 0;
-			char result[200];
-
-			scanf("%d %d %s", &table_id1, &table_id2, result);
-
-			join_table(table_id1, table_id2, result);
-		
-		}
-
-		else if(strcmp(choice, "pp") == 0) {
-			pagenum_t page_num;
-			
-			int table_id;	
-		
-			scanf("%d %ld", &table_id, &page_num);
-
-			print_page(table_id, page_num);
-		}
-
-		else if(strcmp(choice, "pb") == 0) {
-			for(int i = 0; i < num_of_buffer; i++) 
-				print_buffer(i);
-		}
-
-		else if(strcmp(choice, "c") == 0) {
-			int table_id = 0;
-
-			scanf("%d", &table_id);
-
-			close_table(table_id);
-		}
-
-		else if(strcmp(choice, "quit") == 0)
-			break;
-
+		printf("insert %d\n", i);
+		db_insert(1, i, input2);
+		db_insert(2, i, input2); 
 
 	}
 
-	shutdown_db();
 
-	return 0;
+	printf("0");
+	printf("\n\n\n");
+	
+
+	for(int i = 0; i < 3; i++)
+	{
+		if(pthread_create(&threads[i], 0, func, (void*)&i) <0)
+		{
+			perror("no");
+			exit(0);
+		}
+	}
+	for(int i = 0; i < 3; i++)
+	{
+		
+		pthread_join(threads[i], NULL);
+	}
+	printf("end");
+	shutdown_db();
+	return EXIT_SUCCESS;
 }
+

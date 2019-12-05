@@ -11,9 +11,10 @@
 #define INTERNAL_ORDER 249
 #define PAGE_SIZE 4096
 
+
 typedef uint64_t pagenum_t;
 
-extern int fd[11];
+extern int fd_arr[11];
 
 typedef struct record_t {
 

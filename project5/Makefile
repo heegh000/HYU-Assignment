@@ -22,26 +22,29 @@ SRCS3_FOR_LIB:=$(SRCDIR)buffer_manager.cc
 OBJS3_FOR_LIB:=$(SRCS3_FOR_LIB:.cc=.o)
 SRCS4_FOR_LIB:=$(SRCDIR)lock_manager.cc
 OBJS4_FOR_LIB:=$(SRCS4_FOR_LIB:.cc=.o)
+SRCS5_FOR_LIB:=$(SRCDIR)trx_manager.cc
+OBJS5_FOR_LIB:=$(SRCS5_FOR_LIB:.cc=.o)
 
-CXXFLAGS+= -pthread -g -fPIC -I $(INC)
+CXXFLAGS+= -std=c++11 -g -fPIC -I $(INC)
 
 TARGET=main
 
 all: $(TARGET)
 
 $(TARGET): $(TARGET_OBJ)
-	$(CXX) $(CXXFLAGS) -o $(OBJS_FOR_LIB) -c $(SRCS_FOR_LIB)
-	$(CXX) $(CXXFLAGS) -o $(OBJS2_FOR_LIB) -c $(SRCS2_FOR_LIB)
-	$(CXX) $(CXXFLAGS) -o $(OBJS3_FOR_LIB) -c $(SRCS3_FOR_LIB)
-	$(CXX) $(CXXFLAGS) -o $(OBJS4_FOR_LIB) -c $(SRCS4_FOR_LIB)
+	$(CXX) $(CXXFLAGS) -o $(OBJS_FOR_LIB) -c $(SRCS_FOR_LIB) -lpthread
+	$(CXX) $(CXXFLAGS) -o $(OBJS2_FOR_LIB) -c $(SRCS2_FOR_LIB) -lpthread
+	$(CXX) $(CXXFLAGS) -o $(OBJS3_FOR_LIB) -c $(SRCS3_FOR_LIB) -lpthread
+	$(CXX) $(CXXFLAGS) -o $(OBJS4_FOR_LIB) -c $(SRCS4_FOR_LIB) -lpthread
+	$(CXX) $(CXXFLAGS) -o $(OBJS5_FOR_LIB) -c $(SRCS5_FOR_LIB) -lpthread
 	make static_library
-	$(CC) $(CXXFLAGS) -o $@ $^ -L $(LIBS) -lbpt
+	$(CXX) $(CXXFLAGS) -o $@ $^ -L $(LIBS) -lbpt -lpthread
 
 clean:
-	rm $(TARGET) $(TARGET_OBJ) $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB) $(LIBS)*
+	rm $(TARGET) $(TARGET_OBJ) $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB) $(OBJS5_FOR_LIB) $(LIBS)*
 
 library:
-	gcc -shared -Wl,-soname,libbpt.so -o $(LIBS)libbpt.so $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB)
+	gcc -shared -Wl,-soname,libbpt.so -o $(LIBS)libbpt.so $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB) $(OBJS5_FOR_LIB)
 
 static_library:
-	ar cr $(LIBS)libbpt.a $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB)
+	ar cr $(LIBS)libbpt.a $(OBJS_FOR_LIB) $(OBJS2_FOR_LIB) $(OBJS3_FOR_LIB) $(OBJS4_FOR_LIB) $(OBJS5_FOR_LIB)

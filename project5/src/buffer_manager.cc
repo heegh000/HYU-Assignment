@@ -1,10 +1,25 @@
 #include "buffer_manager.h"
 
-extern int fd_arr[11];
-extern buffer_t* buffer;
-extern int num_of_buffer;
 int head = -1;
 int tail = -1;
+
+buffer_t* buffer = NULL;
+int num_of_buffer = 0; 
+pthread_mutex_t buffer_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+void buffer_page_lock(int buffer_index) {
+	pthread_mutex_lock(&(buffer[buffer_index].buffer_page_mutex));
+}
+
+int buffer_page_trylock(int buffer_index) {
+	return pthread_mutex_trylock(&(buffer[buffer_index].buffer_page_mutex));
+}
+
+void buffer_page_unlock(int buffer_index) {
+	pthread_mutex_unlock(&(buffer[buffer_index].buffer_page_mutex));
+}
+
 
 buffer_t* get_buffer_pointer(int table_id, pagenum_t pagenum) {
 
