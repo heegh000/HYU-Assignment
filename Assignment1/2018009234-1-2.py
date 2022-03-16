@@ -16,7 +16,6 @@ M = M@M
 
 print(M)
 
-
 v = M[0,:]
 
 print(np.sqrt(v@v))
