@@ -6,8 +6,9 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "minheap.h"
 
-struct {
+struct{
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
@@ -15,8 +16,19 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+
+int mlfqpv = 0;
+int mlfqtickets = 0;
+
+int sumtickets = 0;
+
 extern void forkret(void);
 extern void trapret(void);
+
+extern int istiin;
+extern int sys_uptime();
+
+extern struct node strheap[3];
 
 static void wakeup1(void *chan);
 
@@ -86,8 +98,12 @@ allocproc(void)
   return 0;
 
 found:
-  p->state = EMBRYO;
+	p->state = EMBRYO;
   p->pid = nextpid++;
+	p->level = 0;
+	p->idx = p - ptable.proc; 
+	p->ticks = 0;
+
 
   release(&ptable.lock);
 
@@ -96,6 +112,8 @@ found:
     p->state = UNUSED;
     return 0;
   }
+
+
   sp = p->kstack + KSTACKSIZE;
 
   // Leave room for trap frame.
@@ -124,7 +142,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -141,16 +159,15 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
-
+	
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
   p->state = RUNNABLE;
-
-  release(&ptable.lock);
+	enqueue(0, p->idx);
+	release(&ptable.lock);
 }
 
 // Grow current process's memory by n bytes.
@@ -183,7 +200,6 @@ fork(void)
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
-
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -213,10 +229,9 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
-
   np->state = RUNNABLE;
-
-  release(&ptable.lock);
+	enqueue(0, np->idx);
+	release(&ptable.lock);
 
   return pid;
 }
@@ -241,7 +256,6 @@ exit(void)
       curproc->ofile[fd] = 0;
     }
   }
-
   begin_op();
   iput(curproc->cwd);
   end_op();
@@ -257,13 +271,15 @@ exit(void)
     if(p->parent == curproc){
       p->parent = initproc;
       if(p->state == ZOMBIE)
-        wakeup1(initproc);
+        wakeup(initproc);
     }
   }
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
-  sched();
+	sumtickets -= curproc->tickets;
+
+	sched();
   panic("zombie exit");
 }
 
@@ -294,6 +310,10 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+				p->level = 0;
+				p->idx = 0;
+				p->ticks = 0;
+				p->tickets = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -305,7 +325,6 @@ wait(void)
       release(&ptable.lock);
       return -1;
     }
-
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
@@ -322,38 +341,100 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+  // struct proc* p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  int idx = 0;
+	uint beforetick = 0;
+//	int aftertick = 0;
+
+	int minpv = 0;
+	int pbcount = 0;
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
-    // Loop over process table looking for process to run.
+		// Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+	
+		minpv = getpvheap();
+
+		//stride scheduler pick the mlfq scheduler
+		if(mlfqpv < minpv || minpv == -1) {
+
+			idx = pickprocmlfq();	
+  
+			if(idx == -1) {
+				
+				if(istiin) {	
+					mlfqtickets = 100 - sumtickets;
+					mlfqpv += BIGNUM / mlfqtickets;
+					istiin = 0;
+				}
+				release(&ptable.lock);
+				continue;
+			}		
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
+			c->proc = &ptable.proc[idx];
+      switchuvm(&ptable.proc[idx]);
+			ptable.proc[idx].state = RUNNING; 
+			beforetick = myproc()->ticks;
+      swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
+			
+			mlfqtickets = 100 - sumtickets;
+			mlfqpv += (ptable.proc[idx].ticks - beforetick) * (BIGNUM / mlfqtickets);
+   
+			pbcount += ptable.proc[idx].ticks - beforetick;
+			
+			if(pbcount % 100 == 0) {
+				priorityboost();
+			}
+			else {
 
-      // Process is done running for now.
+      	if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks > 5) {
+ 		 			ptable.proc[idx].ticks = 0;
+ 		 			ptable.proc[idx].level = 1;
+ 		 		}
+ 		 		else if(ptable.proc[idx].level == 1 && ptable.proc[idx].ticks > 10) {	
+ 		 			ptable.proc[idx].ticks = 0;
+ 		 			ptable.proc[idx].level = 2;
+ 		 		}
+			}		
+  
+			if(ptable.proc[idx].state == RUNNABLE && ptable.proc[idx].level != -1)
+				enqueue(ptable.proc[idx].level, idx);
+
+		  // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-    }
-    release(&ptable.lock);
+		}
 
-  }
+	//stride scheduler picks other proceesses
+	else {
+			
+			idx = heapdelete();
+
+			c->proc = &ptable.proc[idx];
+      switchuvm(&ptable.proc[idx]);
+			ptable.proc[idx].state = RUNNING;	 
+      swtch(&(c->scheduler), ptable.proc[idx].context);
+      switchkvm();
+
+			if(ptable.proc[idx].state == RUNNABLE) {
+				minpv += BIGNUM / ptable.proc[idx].tickets;
+				heapinsert(idx, minpv);
+			}
+      c->proc = 0;
+		}
+ 		
+  	release(&ptable.lock);
+	}
 }
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -369,9 +450,11 @@ sched(void)
   struct proc *p = myproc();
 
   if(!holding(&ptable.lock))
-    panic("sched ptable.lock");
-  if(mycpu()->ncli != 1)
-    panic("sched locks");
+	panic("sched ptable.lock");
+  if(mycpu()->ncli != 1) {
+    cprintf("pid: %d, ncli: %d\n", myproc()->pid, mycpu()->ncli);
+		panic("sched locks");
+	}
   if(p->state == RUNNING)
     panic("sched running");
   if(readeflags()&FL_IF)
@@ -382,13 +465,15 @@ sched(void)
 }
 
 // Give up the CPU for one scheduling round.
-void
+int
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  sched();
+	myproc()->ticks++;
+	sched();
   release(&ptable.lock);
+	return 0;
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -435,10 +520,11 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-
+	
   sched();
 
   // Tidy up.
@@ -459,9 +545,24 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == SLEEPING && p->chan == chan) {
+      
+			p->state = RUNNABLE;
+			
+			if(p->level == -1) {
+				int passval = getpvheap();
+
+				if(mlfqpv < passval || passval == -1)
+					passval = mlfqpv;
+
+				heapinsert(myproc()->idx, passval);
+			}
+			else
+				enqueue(p->level, p->idx);
+			
+		}
+	}
 }
 
 // Wake up all processes sleeping on chan.
@@ -469,7 +570,7 @@ void
 wakeup(void *chan)
 {
   acquire(&ptable.lock);
-  wakeup1(chan);
+	wakeup1(chan);
   release(&ptable.lock);
 }
 
@@ -480,14 +581,28 @@ int
 kill(int pid)
 {
   struct proc *p;
-
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING) {
         p->state = RUNNABLE;
+
+				if(p->level == -1) { 
+					int passval = getpvheap();
+      
+					if(mlfqpv < passval || passval == -1)
+						passval = mlfqpv;
+      
+					heapinsert(myproc()->idx, passval);
+				}
+				else {
+					p->level = 0;
+					p->ticks = 0;
+					enqueue(0, p->idx);
+				}
+			}
       release(&ptable.lock);
       return 0;
     }
@@ -531,4 +646,114 @@ procdump(void)
     }
     cprintf("\n");
   }
+	showmlfq();
+	
+			cprintf("mlfq pv: %d\n", mlfqpv);
+}
+
+void
+addtick(int idx, int num) 
+{
+	acquire(&ptable.lock);
+
+	ptable.proc[idx].ticks += num;
+
+	release(&ptable.lock);
+}
+
+
+//move the processes of middle/low queues to high queue
+void
+priorityboost(void)
+{
+	int idx;
+		
+	for (;;) {
+		if (!isfull(0) && !isempty(1)) {
+			idx = dequeue(1);
+
+			ptable.proc[idx].level = 0;
+			ptable.proc[idx].ticks = 0;
+			
+			enqueue(0, idx);
+		}
+		else
+			break;
+	}
+	for (;;) {
+		if (!isfull(0) && !isempty(2)) {
+			idx = dequeue(2);
+
+			ptable.proc[idx].level = 0;
+			ptable.proc[idx].ticks = 0;
+			
+			enqueue(0, idx);
+		}
+		else
+			break;
+	}
+}
+
+
+int
+getlev(void)
+{
+	return myproc()->level;
+}
+
+/*
+//return sum of tickets of proc in heap on success or -1 on failure
+//caller must acquire ptable.lock
+int
+updatesumtickets(void)
+{	
+	if(heapcapa == 0)
+		return -1;
+
+	int i;
+	int sum = 0;
+	
+	for(i = 1; i < heapcapa+1; i++)
+		sum += ptable.proc[i].tickets;
+
+	sumtickets = sum;
+
+	return sum;
+} */
+
+int 
+set_cpu_share(int tickets) 
+{
+
+	acquire(&ptable.lock);
+
+	if(tickets <= 0) {
+		release(&ptable.lock);
+		return -1;
+	}
+	
+	int sum = tickets + sumtickets;
+	
+	if(sum > 80) {
+		release(&ptable.lock);
+		return -1;
+	}
+
+	int passval = getpvheap();
+
+	ptable.proc[myproc()->idx].level = -1;
+	ptable.proc[myproc()->idx].ticks = 0;
+	ptable.proc[myproc()->idx].tickets = tickets;
+
+	
+	if(mlfqpv < passval || passval == -1)
+		passval = mlfqpv;
+
+	heapinsert(myproc()->idx, passval);
+
+	//updatesumtickets();
+	sumtickets += tickets;
+
+	release(&ptable.lock);
+	return 0;
 }

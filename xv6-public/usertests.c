@@ -792,9 +792,10 @@ concreate(void)
       close(fd);
     }
     if(pid == 0)
-      exit();
+      exit(); 
     else
       wait();
+
   }
 
   memset(fa, 0, sizeof(fa));

@@ -119,7 +119,12 @@ void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
-void            yield(void);
+int	            yield(void);
+void						addtick(int,int);
+void						priorityboost(void);
+int 						getlev(void);
+int							updatesumtickets(void);
+int							set_cpu_share(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -186,5 +191,28 @@ void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 
+// prac_syscall.c
+int my_syscall(char*);
+
+
+//mlfq.c
+int 						isempty(int);
+int 						isfull(int);
+int 						enqueue(int, int);
+int 						dequeue(int);
+void 						showqueue(int);
+void 						showmlfq();
+int 						pickprocmlfq();
+
+//minheap.c
+int 						heapinsert(int, int);   
+int 						heapdelete(void); 
+int 						getidxheap(void);
+int 						getpvheap(void);
+
+
+// pick a process to run
+
+// return index of process on success or -1 on failure
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

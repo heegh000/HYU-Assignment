@@ -89,3 +89,34 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_getppid(void)
+{
+	return myproc()->parent->pid;	
+}
+
+int 
+sys_yield(void)
+{
+	return yield();
+}
+
+
+int 
+sys_getlev(void)
+{
+	return getlev();
+}
+
+int
+sys_set_cpu_share(void)
+{
+	int tickets;
+
+	if(argint(0, &tickets) < 0)
+		return -1;
+	
+	return set_cpu_share(tickets);
+}
+
