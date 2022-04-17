@@ -169,6 +169,7 @@ void            idtinit(void);
 extern uint     ticks;
 void            tvinit(void);
 extern struct spinlock tickslock;
+extern int			passti;
 
 // uart.c
 void            uartinit(void);
@@ -209,7 +210,7 @@ int 						heapinsert(int, int);
 int 						heapdelete(void); 
 int 						getidxheap(void);
 int 						getpvheap(void);
-
+void						showheap(void);
 
 // pick a process to run
 

@@ -111,6 +111,15 @@ getpvheap()
 	return -1;
 }
 
+void
+showheap() 
+{	
+	int i =0;
+	for(i = 1; i < heapcapa+1; i++)
+		cprintf("(idx: %d, pv: %d), ", strheap[i].idx, strheap[i].passval);
+	cprintf("\n");
+
+}
 
 
 /*

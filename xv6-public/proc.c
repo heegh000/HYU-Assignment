@@ -103,7 +103,7 @@ found:
 	p->level = 0;
 	p->idx = p - ptable.proc; 
 	p->ticks = 0;
-
+	p->tickets = 0;
 
   release(&ptable.lock);
 
@@ -345,8 +345,8 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   int idx = 0;
+	uint beforeproctick = 0;
 	uint beforetick = 0;
-//	int aftertick = 0;
 
 	int minpv = 0;
 	int pbcount = 0;
@@ -370,7 +370,7 @@ scheduler(void)
 					mlfqtickets = 100 - sumtickets;
 					mlfqpv += BIGNUM / mlfqtickets;
 					istiin = 0;
-				}
+				} 
 				release(&ptable.lock);
 				continue;
 			}		
@@ -381,32 +381,44 @@ scheduler(void)
 			c->proc = &ptable.proc[idx];
       switchuvm(&ptable.proc[idx]);
 			ptable.proc[idx].state = RUNNING; 
-			beforetick = myproc()->ticks;
-      swtch(&(c->scheduler), ptable.proc[idx].context);
+			
+			beforeproctick = ptable.proc[idx].ticks;
+      beforetick = sys_uptime();
+
+			if(beforeproctick == 9 && ptable.proc[idx].level == 1) {
+				acquire(&tickslock);
+				passti += 1;
+				release(&tickslock);				
+			}
+
+			swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
 			
 			mlfqtickets = 100 - sumtickets;
-			mlfqpv += (ptable.proc[idx].ticks - beforetick) * (BIGNUM / mlfqtickets);
-   
-			pbcount += ptable.proc[idx].ticks - beforetick;
+			mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 			
-			if(pbcount % 100 == 0) {
-				priorityboost();
-			}
-			else {
+			pbcount += sys_uptime() - beforetick;
 
-      	if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks > 5) {
- 		 			ptable.proc[idx].ticks = 0;
- 		 			ptable.proc[idx].level = 1;
- 		 		}
- 		 		else if(ptable.proc[idx].level == 1 && ptable.proc[idx].ticks > 10) {	
- 		 			ptable.proc[idx].ticks = 0;
- 		 			ptable.proc[idx].level = 2;
- 		 		}
-			}		
+//cprintf("ticks: %d\n", ptable.proc[idx].ticks - beforeproctick);
+
+    	if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks >= 5) {
+	 			ptable.proc[idx].ticks = 0;
+	 			ptable.proc[idx].level = 1;
+	 		}
+	 		else if(ptable.proc[idx].level == 1 && ptable.proc[idx].ticks >= 10) {	
+	 			ptable.proc[idx].ticks = 0;
+	 			ptable.proc[idx].level = 2;
+	 		}		
   
 			if(ptable.proc[idx].state == RUNNABLE && ptable.proc[idx].level != -1)
 				enqueue(ptable.proc[idx].level, idx);
+
+			
+			if(pbcount >= 100) {
+//				cprintf("pbcout: %d", pbcount);
+				pbcount = 0;
+				priorityboost();
+			}
 
 		  // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -459,7 +471,8 @@ sched(void)
     panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
-  intena = mycpu()->intena;
+  intena = mycpu()->intena;	
+	p->ticks++;
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }
@@ -470,7 +483,6 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-	myproc()->ticks++;
 	sched();
   release(&ptable.lock);
 	return 0;
@@ -523,8 +535,7 @@ sleep(void *chan, struct spinlock *lk)
 
   // Go to sleep.
   p->chan = chan;
-  p->state = SLEEPING;
-	
+  p->state = SLEEPING;	
   sched();
 
   // Tidy up.
@@ -646,18 +657,21 @@ procdump(void)
     }
     cprintf("\n");
   }
+
+
+	cprintf("mlfq\n");
 	showmlfq();
+	cprintf("mlfq pass val: %d", mlfqpv);
+	cprintf("\n\n stride heap\n");
+	showheap();
 	
-			cprintf("mlfq pv: %d\n", mlfqpv);
 }
 
 void
 addtick(int idx, int num) 
 {
 	acquire(&ptable.lock);
-
 	ptable.proc[idx].ticks += num;
-
 	release(&ptable.lock);
 }
 
@@ -701,26 +715,6 @@ getlev(void)
 	return myproc()->level;
 }
 
-/*
-//return sum of tickets of proc in heap on success or -1 on failure
-//caller must acquire ptable.lock
-int
-updatesumtickets(void)
-{	
-	if(heapcapa == 0)
-		return -1;
-
-	int i;
-	int sum = 0;
-	
-	for(i = 1; i < heapcapa+1; i++)
-		sum += ptable.proc[i].tickets;
-
-	sumtickets = sum;
-
-	return sum;
-} */
-
 int 
 set_cpu_share(int tickets) 
 {
@@ -731,8 +725,7 @@ set_cpu_share(int tickets)
 		release(&ptable.lock);
 		return -1;
 	}
-	
-	int sum = tickets + sumtickets;
+	int sum = sumtickets + tickets - ptable.proc[myproc()->idx].tickets;
 	
 	if(sum > 80) {
 		release(&ptable.lock);
@@ -751,8 +744,7 @@ set_cpu_share(int tickets)
 
 	heapinsert(myproc()->idx, passval);
 
-	//updatesumtickets();
-	sumtickets += tickets;
+	sumtickets = sum;
 
 	release(&ptable.lock);
 	return 0;
