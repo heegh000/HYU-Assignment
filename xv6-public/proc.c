@@ -166,7 +166,7 @@ userinit(void)
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
   p->state = RUNNABLE;
-	enqueue(0, p->idx);
+	enqueue(p->idx, 0);
 	release(&ptable.lock);
 }
 
@@ -230,7 +230,7 @@ fork(void)
 
   acquire(&ptable.lock);
   np->state = RUNNABLE;
-	enqueue(0, np->idx);
+	enqueue(np->idx, 0);
 	release(&ptable.lock);
 
   return pid;
@@ -385,16 +385,17 @@ scheduler(void)
 			beforeproctick = ptable.proc[idx].ticks;
       beforetick = sys_uptime();
 
-			if(beforeproctick == 9 && ptable.proc[idx].level == 1) {
+			if(beforeproctick == 9 && ptable.proc[idx].level == 1 && ptable.proc[idx].killed == 0) {
 				acquire(&tickslock);
 				passti += 1;
 				release(&tickslock);				
 			}
 
 			swtch(&(c->scheduler), ptable.proc[idx].context);
-      switchkvm();
-			
+      switchkvm();	
+
 			mlfqtickets = 100 - sumtickets;
+
 			mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 			
 			pbcount += sys_uptime() - beforetick;
@@ -410,10 +411,19 @@ scheduler(void)
 	 			ptable.proc[idx].level = 2;
 	 		}		
   
-			if(ptable.proc[idx].state == RUNNABLE && ptable.proc[idx].level != -1)
-				enqueue(ptable.proc[idx].level, idx);
+			if(ptable.proc[idx].state == RUNNABLE) {
+				if(ptable.proc[idx].level != -1) {
+					enqueue(idx, ptable.proc[idx].level);
+				}
+				else {
 
-			
+					int passval = getpvheap();
+					if(mlfqpv < passval || passval == -1)
+						passval = mlfqpv;
+
+					heapinsert(idx, passval);
+				}
+			}
 			if(pbcount >= 100) {
 //				cprintf("pbcout: %d", pbcount);
 				pbcount = 0;
@@ -440,6 +450,7 @@ scheduler(void)
 				minpv += BIGNUM / ptable.proc[idx].tickets;
 				heapinsert(idx, minpv);
 			}
+
       c->proc = 0;
 		}
  		
@@ -560,18 +571,17 @@ wakeup1(void *chan)
     if(p->state == SLEEPING && p->chan == chan) {
       
 			p->state = RUNNABLE;
-			
-			if(p->level == -1) {
+			if(p->level != -1) {
+				enqueue(p->idx, p->level);
+			}
+			else {
 				int passval = getpvheap();
 
 				if(mlfqpv < passval || passval == -1)
 					passval = mlfqpv;
 
-				heapinsert(myproc()->idx, passval);
-			}
-			else
-				enqueue(p->level, p->idx);
-			
+				heapinsert(p->idx, passval);
+			}	
 		}
 	}
 }
@@ -600,19 +610,20 @@ kill(int pid)
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
 
-				if(p->level == -1) { 
+				if(p->level != -1) {
+					p->level = 0;
+					p->ticks = 0;
+					enqueue(p->idx, 0);
+				}
+				else {
 					int passval = getpvheap();
       
 					if(mlfqpv < passval || passval == -1)
 						passval = mlfqpv;
       
-					heapinsert(myproc()->idx, passval);
+					heapinsert(p->idx, passval);
 				}
-				else {
-					p->level = 0;
-					p->ticks = 0;
-					enqueue(0, p->idx);
-				}
+				
 			}
       release(&ptable.lock);
       return 0;
@@ -662,8 +673,9 @@ procdump(void)
 	cprintf("mlfq\n");
 	showmlfq();
 	cprintf("mlfq pass val: %d", mlfqpv);
-	cprintf("\n\n stride heap\n");
+	cprintf("\n\nstride heap\n");
 	showheap();
+	cprintf("sumtickets: %d\n", sumtickets);
 	
 }
 
@@ -689,7 +701,7 @@ priorityboost(void)
 			ptable.proc[idx].level = 0;
 			ptable.proc[idx].ticks = 0;
 			
-			enqueue(0, idx);
+			enqueue(idx, 0);
 		}
 		else
 			break;
@@ -701,7 +713,7 @@ priorityboost(void)
 			ptable.proc[idx].level = 0;
 			ptable.proc[idx].ticks = 0;
 			
-			enqueue(0, idx);
+			enqueue(idx, 0);
 		}
 		else
 			break;
@@ -716,36 +728,34 @@ getlev(void)
 }
 
 int 
-set_cpu_share(int tickets) 
+set_cpu_share(int reqtickets) 
 {
 
 	acquire(&ptable.lock);
 
-	if(tickets <= 0) {
+	if(reqtickets <= 0) {
 		release(&ptable.lock);
 		return -1;
 	}
-	int sum = sumtickets + tickets - ptable.proc[myproc()->idx].tickets;
-	
+
+	int proctickets = ptable.proc[myproc()->idx].tickets;
+	int sum = sumtickets + reqtickets - proctickets;
+
 	if(sum > 80) {
-		release(&ptable.lock);
-		return -1;
+			release(&ptable.lock);
+			return -1;
 	}
 
-	int passval = getpvheap();
+	if(proctickets) {
+		ptable.proc[myproc()->idx].tickets = reqtickets;
+	}
 
-	ptable.proc[myproc()->idx].level = -1;
-	ptable.proc[myproc()->idx].ticks = 0;
-	ptable.proc[myproc()->idx].tickets = tickets;
-
-	
-	if(mlfqpv < passval || passval == -1)
-		passval = mlfqpv;
-
-	heapinsert(myproc()->idx, passval);
-
+	else {   
+		ptable.proc[myproc()->idx].level = -1;
+		ptable.proc[myproc()->idx].tickets = reqtickets;
+  }
 	sumtickets = sum;
-
 	release(&ptable.lock);
-	return 0;
+	return 0; 
+	
 }

@@ -134,9 +134,9 @@ trap(struct trapframe *tf)
 			release(&tickslock);
 			yield();
 		}
-		else
+		else 
 			release(&tickslock);
-	
+
 	}
 
   // Check if the process has been killed since we yielded

@@ -12,4 +12,4 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 #define MAXCAPACITY 65 // max capacity of processes for mlfq, minheap
-#define BIGNUM 100000 // for stride scheduling
+#define BIGNUM 10000 // for stride scheduling

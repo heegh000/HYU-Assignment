@@ -29,7 +29,7 @@ isfull (int level)
 
 // return the input value on success or -1 on failure
 int
-enqueue(int level, int idx) 
+enqueue(int idx, int level) 
 {
 	if(isfull(level))
 		return -1;
