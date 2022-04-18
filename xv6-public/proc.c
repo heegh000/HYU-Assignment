@@ -101,12 +101,12 @@ allocproc(void)
   return 0;
 
 found:
-	p->state = EMBRYO;
+  p->state = EMBRYO;
   p->pid = nextpid++;
-	p->level = 0;
-	p->idx = p - ptable.proc; 
-	p->ticks = 0;
-	p->tickets = 0;
+  p->level = 0;
+  p->idx = p - ptable.proc; 
+  p->ticks = 0;
+  p->tickets = 0;
 
   release(&ptable.lock);
 
@@ -162,15 +162,15 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
-	
+  
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
   p->state = RUNNABLE;
-	enqueue(p->idx, 0);
-	release(&ptable.lock);
+  enqueue(p->idx, 0);
+  release(&ptable.lock);
 }
 
 // Grow current process's memory by n bytes.
@@ -233,8 +233,8 @@ fork(void)
 
   acquire(&ptable.lock);
   np->state = RUNNABLE;
-	enqueue(np->idx, 0);
-	release(&ptable.lock);
+  enqueue(np->idx, 0);
+  release(&ptable.lock);
 
   return pid;
 }
@@ -280,9 +280,9 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
-	sumtickets -= curproc->tickets;
+  sumtickets -= curproc->tickets;
 
-	sched();
+  sched();
   panic("zombie exit");
 }
 
@@ -313,10 +313,10 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-				p->level = 0;
-				p->idx = 0;
-				p->ticks = 0;
-				p->tickets = 0;
+        p->level = 0;
+        p->idx = 0;
+        p->ticks = 0;
+        p->tickets = 0;
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -348,37 +348,36 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   int idx = 0;
-	//uint beforeproctick = 0;
-	uint beforetick = 0;
-	uint aftertick = 0;
-	uint difftick =0;
+  uint beforetick = 0;
+  uint aftertick = 0;
+  uint difftick =0;
 
-	int minpv = 0;
-	int pbcount = 0;
+  int minpv = 0;
+  int pbcount = 0;
 
   for(;;){
     // Enable interrupts on this processor.
     sti();
-		// Loop over process table looking for process to run.
+    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-	
-		minpv = getpvheap();
-
-		//stride scheduler pick the mlfq scheduler
-		if(mlfqpv < minpv || minpv == -1) {
-
-			idx = pickprocmlfq();	
   
-			if(idx == -1) {
-				
-				if(istiin) {	
-					mlfqtickets = 100 - sumtickets;
-					mlfqpv += BIGNUM / mlfqtickets;
-					istiin = 0;
-				} 
-				release(&ptable.lock);
-				continue;
-			}		
+    minpv = getpvheap();
+
+    //stride scheduler pick the mlfq scheduler
+    if(mlfqpv < minpv || minpv == -1) {
+
+      idx = pickprocmlfq();  
+  
+      if(idx == -1) {
+        
+        if(istiin) {  
+          mlfqtickets = 100 - sumtickets;
+          mlfqpv += BIGNUM / mlfqtickets;
+          istiin = 0;
+        } 
+        release(&ptable.lock);
+        continue;
+      }    
 
 
       beforetick = sys_uptime();
@@ -386,86 +385,84 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-			c->proc = &ptable.proc[idx];
+      c->proc = &ptable.proc[idx];
       switchuvm(&ptable.proc[idx]);
-			ptable.proc[idx].state = RUNNING; 
-			
-			//beforeproctick = ptable.proc[idx].ticks;
+      ptable.proc[idx].state = RUNNING; 
+      
 
-			if(ptable.proc[idx].ticks == 9 && ptable.proc[idx].level == 1 && ptable.proc[idx].killed == 0) {
-				acquire(&tickslock);
-				passti += 1;
-				release(&tickslock);				
-			} 
+      if(ptable.proc[idx].ticks == 9 && ptable.proc[idx].level == 1 && ptable.proc[idx].killed == 0) {
+        acquire(&tickslock);
+        passti += 1;
+        release(&tickslock);        
+      } 
 
-			swtch(&(c->scheduler), ptable.proc[idx].context);
-			switchkvm();
-			
-			ptable.proc[idx].ticks++;
-			passti = 0;
-			
-			
-			mlfqtickets = 100 - sumtickets;
-			
-			aftertick = sys_uptime();
-			difftick = aftertick - beforetick;
-			
-			
-			pbcount += difftick;
-			mlfqpv += difftick * (BIGNUM / mlfqtickets);
+      swtch(&(c->scheduler), ptable.proc[idx].context);
+      switchkvm();
+      
+      ptable.proc[idx].ticks++;
+      passti = 0;
+      
+      
+      mlfqtickets = 100 - sumtickets;
+      
+      aftertick = sys_uptime();
+      difftick = aftertick - beforetick;
+      
+      pbcount += difftick;
+      mlfqpv += difftick * (BIGNUM / mlfqtickets);
 
-    	if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks >= 5) {
-	 			ptable.proc[idx].ticks = 0;
-	 			ptable.proc[idx].level = 1;
-	 		}
-	 		else if(ptable.proc[idx].level == 1 && ptable.proc[idx].ticks >= 10) {	
-	 			ptable.proc[idx].ticks = 0;
-	 			ptable.proc[idx].level = 2;
-	 		}		
+      if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks >= 5) {
+         ptable.proc[idx].ticks = 0;
+         ptable.proc[idx].level = 1;
+       }
+       else if(ptable.proc[idx].level == 1 && ptable.proc[idx].ticks >= 10) {  
+         ptable.proc[idx].ticks = 0;
+         ptable.proc[idx].level = 2;
+       }    
   
-			if(ptable.proc[idx].state == RUNNABLE) {
-				if(ptable.proc[idx].level != -1) {
-					enqueue(idx, ptable.proc[idx].level);
-				}
-				else {
-					int passval = getpvheap();
-					if(mlfqpv < passval || passval == -1)
-						passval = mlfqpv;
+      if(ptable.proc[idx].state == RUNNABLE) {
+        if(ptable.proc[idx].level != -1) {
+          enqueue(idx, ptable.proc[idx].level);
+        }
+        else {
+          int passval = getpvheap();
+          if(mlfqpv < passval || passval == -1)
+            passval = mlfqpv;
 
-					heapinsert(idx, passval);
-				}
-			}
-			if(pbcount >= 100) {
-				pbcount = 0;
-				priorityboost();
-			}
+          heapinsert(idx, passval);
+        }
+      }
+      if(pbcount >= 100) {
+        pbcount = 0;
+        priorityboost();
+      }
 
-		  // Process is done running for now.
+      // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-		}
+    }
 
-	//stride scheduler picks other proceesses
-	else {
-			
-			idx = heapdelete();
+  //stride scheduler picks other proceesses
+  else {
+      
+      idx = heapdelete();
 
-			c->proc = &ptable.proc[idx];
+      c->proc = &ptable.proc[idx];
       switchuvm(&ptable.proc[idx]);
-			ptable.proc[idx].state = RUNNING;	 
+      ptable.proc[idx].state = RUNNING;   
       swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
 
-			if(ptable.proc[idx].state == RUNNABLE) {
-				minpv += BIGNUM / ptable.proc[idx].tickets;
-				heapinsert(idx, minpv);
-			}
+      if(ptable.proc[idx].state == RUNNABLE) {
+        minpv += BIGNUM / ptable.proc[idx].tickets;
+        heapinsert(idx, minpv);
+      }
 
       c->proc = 0;
-		}
- 		
-  	release(&ptable.lock);
-	}
+    }
+     
+    release(&ptable.lock);
+  }
 }
 
 
@@ -483,16 +480,16 @@ sched(void)
   struct proc *p = myproc();
 
   if(!holding(&ptable.lock))
-	panic("sched ptable.lock");
+  panic("sched ptable.lock");
   if(mycpu()->ncli != 1) {
     cprintf("pid: %d, ncli: %d\n", myproc()->pid, mycpu()->ncli);
-		panic("sched locks");
-	}
+    panic("sched locks");
+  }
   if(p->state == RUNNING)
     panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
-  intena = mycpu()->intena;	
+  intena = mycpu()->intena;  
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }
@@ -503,9 +500,9 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-	sched();
+  sched();
   release(&ptable.lock);
-	return 0;
+  return 0;
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -555,7 +552,7 @@ sleep(void *chan, struct spinlock *lk)
 
   // Go to sleep.
   p->chan = chan;
-  p->state = SLEEPING;	
+  p->state = SLEEPING;  
   sched();
 
   // Tidy up.
@@ -579,20 +576,20 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if(p->state == SLEEPING && p->chan == chan) {
       
-			p->state = RUNNABLE;
-			if(p->level != -1) {
-				enqueue(p->idx, p->level);
-			}
-			else {
-				int passval = getpvheap();
+      p->state = RUNNABLE;
+      if(p->level != -1) {
+        enqueue(p->idx, p->level);
+      }
+      else {
+        int passval = getpvheap();
 
-				if(mlfqpv < passval || passval == -1)
-					passval = mlfqpv;
+        if(mlfqpv < passval || passval == -1)
+          passval = mlfqpv;
 
-				heapinsert(p->idx, passval);
-			}	
-		}
-	}
+        heapinsert(p->idx, passval);
+      }  
+    }
+  }
 }
 
 // Wake up all processes sleeping on chan.
@@ -600,7 +597,7 @@ void
 wakeup(void *chan)
 {
   acquire(&ptable.lock);
-	wakeup1(chan);
+  wakeup1(chan);
   release(&ptable.lock);
 }
 
@@ -619,21 +616,21 @@ kill(int pid)
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
 
-				if(p->level != -1) {
-					p->level = 0;
-					p->ticks = 0;
-					enqueue(p->idx, 0);
-				}
-				else {
-					int passval = getpvheap();
+        if(p->level != -1) {
+          p->level = 0;
+          p->ticks = 0;
+          enqueue(p->idx, 0);
+        }
+        else {
+          int passval = getpvheap();
       
-					if(mlfqpv < passval || passval == -1)
-						passval = mlfqpv;
+          if(mlfqpv < passval || passval == -1)
+            passval = mlfqpv;
       
-					heapinsert(p->idx, passval);
-				}
-				
-			}
+          heapinsert(p->idx, passval);
+        }
+        
+      }
       release(&ptable.lock);
       return 0;
     }
@@ -679,21 +676,21 @@ procdump(void)
   }
 
 
-	cprintf("mlfq\n");
-	showmlfq();
-	cprintf("mlfq pass val: %d", mlfqpv);
-	cprintf("\n\nstride heap\n");
-	showheap();
-	cprintf("sumtickets: %d\n", sumtickets);
-	
+  cprintf("mlfq\n");
+  showmlfq();
+  cprintf("mlfq pass val: %d", mlfqpv);
+  cprintf("\n\nstride heap\n");
+  showheap();
+  cprintf("sumtickets: %d\n", sumtickets);
+  
 }
 
 void
 addtick(int idx, int num) 
 {
-	acquire(&ptable.lock);
-	ptable.proc[idx].ticks += num;
-	release(&ptable.lock);
+  acquire(&ptable.lock);
+  ptable.proc[idx].ticks += num;
+  release(&ptable.lock);
 }
 
 
@@ -701,70 +698,70 @@ addtick(int idx, int num)
 void
 priorityboost(void)
 {
-	int idx;
-		
-	for (;;) {
-		if (!isfull(0) && !isempty(1)) {
-			idx = dequeue(1);
+  int idx;
+    
+  for (;;) {
+    if (!isfull(0) && !isempty(1)) {
+      idx = dequeue(1);
 
-			ptable.proc[idx].level = 0;
-			ptable.proc[idx].ticks = 0;
-			
-			enqueue(idx, 0);
-		}
-		else
-			break;
-	}
-	for (;;) {
-		if (!isfull(0) && !isempty(2)) {
-			idx = dequeue(2);
+      ptable.proc[idx].level = 0;
+      ptable.proc[idx].ticks = 0;
+      
+      enqueue(idx, 0);
+    }
+    else
+      break;
+  }
+  for (;;) {
+    if (!isfull(0) && !isempty(2)) {
+      idx = dequeue(2);
 
-			ptable.proc[idx].level = 0;
-			ptable.proc[idx].ticks = 0;
-			
-			enqueue(idx, 0);
-		}
-		else
-			break;
-	}
+      ptable.proc[idx].level = 0;
+      ptable.proc[idx].ticks = 0;
+      
+      enqueue(idx, 0);
+    }
+    else
+      break;
+  }
 }
 
 
 int
 getlev(void)
 {
-	return myproc()->level;
+  return myproc()->level;
 }
 
 int 
 set_cpu_share(int reqtickets) 
 {
 
-	acquire(&ptable.lock);
+  acquire(&ptable.lock);
 
-	if(reqtickets <= 0) {
-		release(&ptable.lock);
-		return -1;
-	}
-
-	int proctickets = ptable.proc[myproc()->idx].tickets;
-	int sum = sumtickets + reqtickets - proctickets;
-
-	if(sum > 80) {
-			release(&ptable.lock);
-			return -1;
-	}
-
-	if(proctickets) {
-		ptable.proc[myproc()->idx].tickets = reqtickets;
-	}
-
-	else {   
-		ptable.proc[myproc()->idx].level = -1;
-		ptable.proc[myproc()->idx].tickets = reqtickets;
+  if(reqtickets <= 0) {
+    release(&ptable.lock);
+    return -1;
   }
-	sumtickets = sum;
-	release(&ptable.lock);
-	return 0; 
-	
+
+  int proctickets = ptable.proc[myproc()->idx].tickets;
+  int sum = sumtickets + reqtickets - proctickets;
+
+  if(sum > 80) {
+      release(&ptable.lock);
+      return -1;
+  }
+
+  if(proctickets) {
+    ptable.proc[myproc()->idx].tickets = reqtickets;
+  }
+
+  else {   
+    ptable.proc[myproc()->idx].level = -1;
+    ptable.proc[myproc()->idx].tickets = reqtickets;
+  }
+  sumtickets = sum;
+  release(&ptable.lock);
+  return 0; 
+  
 }

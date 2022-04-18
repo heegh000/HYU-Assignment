@@ -55,7 +55,7 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
-			istiin = 1;	
+      istiin = 1;  
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -109,31 +109,31 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
     tf->trapno == T_IRQ0+IRQ_TIMER) {
-		
-//		acquire(&tickslock);
-	
-		addtick(myproc()->idx, 1);
-		if(myproc()->level == -1 || myproc()->level == 0) {
-			addtick(myproc()->idx, -1);
-//			release(&tickslock);
-			yield();	
-		} 
-		else {
-				passti++;
-				if(myproc()->level == 1 && passti == 2) {
-					addtick(myproc()->idx, -1);
-//					release(&tickslock);
-					yield();
-				} 
-				else if(myproc()->level == 2 && passti == 4) {
-					addtick(myproc()->idx, -1);
-//					release(&tickslock);
-					yield();
-				}
-//				else 
-//					release(&tickslock);
-		}
-	}
+    
+//    acquire(&tickslock);
+  
+    addtick(myproc()->idx, 1);
+    if(myproc()->level == -1 || myproc()->level == 0) {
+      addtick(myproc()->idx, -1);
+//      release(&tickslock);
+      yield();  
+    } 
+    else {
+        passti++;
+        if(myproc()->level == 1 && passti == 2) {
+          addtick(myproc()->idx, -1);
+//          release(&tickslock);
+          yield();
+        } 
+        else if(myproc()->level == 2 && passti == 4) {
+          addtick(myproc()->idx, -1);
+//          release(&tickslock);
+          yield();
+        }
+//        else 
+//          release(&tickslock);
+    }
+  }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

@@ -1,8 +1,8 @@
 // circular queue to store idx of proc in proc array
 struct cqueue {
-	int procidx[MAXCAPACITY];
-	int head;
-	int tail;
+  int procidx[MAXCAPACITY];
+  int head;
+  int tail;
 };
 
 // check state of the queue

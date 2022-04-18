@@ -93,30 +93,30 @@ sys_uptime(void)
 int
 sys_getppid(void)
 {
-	return myproc()->parent->pid;	
+  return myproc()->parent->pid;  
 }
 
 int 
 sys_yield(void)
 {
-	return yield();
+  return yield();
 }
 
 
 int 
 sys_getlev(void)
 {
-	return getlev();
+  return getlev();
 }
 
 int
 sys_set_cpu_share(void)
 {
-	int tickets;
+  int tickets;
 
-	if(argint(0, &tickets) < 0)
-		return -1;
-	
-	return set_cpu_share(tickets);
+  if(argint(0, &tickets) < 0)
+    return -1;
+  
+  return set_cpu_share(tickets);
 }
 
