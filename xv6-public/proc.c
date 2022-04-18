@@ -410,7 +410,6 @@ scheduler(void)
 			aftertick = sys_uptime();
 			difftick = aftertick - beforetick;
 			
-			//mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 			
 			pbcount += difftick;
 			mlfqpv += difftick * (BIGNUM / mlfqtickets);
