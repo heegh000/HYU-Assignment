@@ -119,12 +119,12 @@ void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
-int	            yield(void);
-void						addtick(int,int);
-void						priorityboost(void);
-int 						getlev(void);
-int							updatesumtickets(void);
-int							set_cpu_share(int);
+int             yield(void);
+void            addtick(int,int);
+void            priorityboost(void);
+int             getlev(void);
+int             updatesumtickets(void);
+int             set_cpu_share(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -169,7 +169,7 @@ void            idtinit(void);
 extern uint     ticks;
 void            tvinit(void);
 extern struct spinlock tickslock;
-extern int			passti;
+extern int      passti;
 
 // uart.c
 void            uartinit(void);
@@ -197,20 +197,20 @@ int my_syscall(char*);
 
 
 //mlfq.c
-int 						isempty(int);
-int 						isfull(int);
-int 						enqueue(int, int);
-int 						dequeue(int);
-void 						showqueue(int);
-void 						showmlfq();
-int 						pickprocmlfq();
+int             isempty(int);
+int             isfull(int);
+int             enqueue(int, int);
+int             dequeue(int);
+void            showqueue(int);
+void            showmlfq(void);
+int             pickprocmlfq(void);
 
 //minheap.c
-int 						heapinsert(int, int);   
-int 						heapdelete(void); 
-int 						getidxheap(void);
-int 						getpvheap(void);
-void						showheap(void);
+int             heapinsert(int, int);   
+int             heapdelete(void); 
+int             getidxheap(void);
+int             getpvheap(void);
+void            showheap(void);
 
 // pick a process to run
 
