@@ -18,8 +18,6 @@ uint ticks;
 int passti = 0;
 int istiin = 0;
 
-extern void priorityboost();
-
 void
 tvinit(void)
 {
@@ -112,31 +110,29 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING &&
     tf->trapno == T_IRQ0+IRQ_TIMER) {
 		
-		acquire(&tickslock);
+//		acquire(&tickslock);
 	
-		passti++;
 		addtick(myproc()->idx, 1);
 		if(myproc()->level == -1 || myproc()->level == 0) {
 			addtick(myproc()->idx, -1);
-			passti = 0;
-			release(&tickslock);
+//			release(&tickslock);
 			yield();	
-		}
-		else if(myproc()->level == 1 && passti == 2) {
-			addtick(myproc()->idx, -1);
-			passti = 0;
-			release(&tickslock);
-			yield();
 		} 
-		else if(myproc()->level == 2 && passti == 4) {
-			addtick(myproc()->idx, -1);
-			passti = 0;
-			release(&tickslock);
-			yield();
+		else {
+				passti++;
+				if(myproc()->level == 1 && passti == 2) {
+					addtick(myproc()->idx, -1);
+//					release(&tickslock);
+					yield();
+				} 
+				else if(myproc()->level == 2 && passti == 4) {
+					addtick(myproc()->idx, -1);
+//					release(&tickslock);
+					yield();
+				}
+//				else 
+//					release(&tickslock);
 		}
-		else 
-			release(&tickslock);
-
 	}
 
   // Check if the process has been killed since we yielded

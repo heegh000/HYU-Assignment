@@ -27,6 +27,9 @@ extern void trapret(void);
 
 extern int istiin;
 extern int sys_uptime();
+extern int passti;
+extern struct spinlock tickslock;
+
 
 extern struct node strheap[3];
 
@@ -345,8 +348,10 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   int idx = 0;
-	uint beforeproctick = 0;
+	//uint beforeproctick = 0;
 	uint beforetick = 0;
+	uint aftertick = 0;
+	uint difftick =0;
 
 	int minpv = 0;
 	int pbcount = 0;
@@ -375,6 +380,9 @@ scheduler(void)
 				continue;
 			}		
 
+
+      beforetick = sys_uptime();
+
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -382,25 +390,30 @@ scheduler(void)
       switchuvm(&ptable.proc[idx]);
 			ptable.proc[idx].state = RUNNING; 
 			
-			beforeproctick = ptable.proc[idx].ticks;
-      beforetick = sys_uptime();
+			//beforeproctick = ptable.proc[idx].ticks;
 
-			if(beforeproctick == 9 && ptable.proc[idx].level == 1 && ptable.proc[idx].killed == 0) {
+			if(ptable.proc[idx].ticks == 9 && ptable.proc[idx].level == 1 && ptable.proc[idx].killed == 0) {
 				acquire(&tickslock);
 				passti += 1;
 				release(&tickslock);				
-			}
+			} 
 
 			swtch(&(c->scheduler), ptable.proc[idx].context);
-      switchkvm();	
-
-			mlfqtickets = 100 - sumtickets;
-
-			mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
+			switchkvm();
 			
-			pbcount += sys_uptime() - beforetick;
-
-//cprintf("ticks: %d\n", ptable.proc[idx].ticks - beforeproctick);
+			ptable.proc[idx].ticks++;
+			passti = 0;
+			
+			
+			mlfqtickets = 100 - sumtickets;
+			
+			aftertick = sys_uptime();
+			difftick = aftertick - beforetick;
+			
+			//mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
+			
+			pbcount += difftick;
+			mlfqpv += difftick * (BIGNUM / mlfqtickets);
 
     	if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks >= 5) {
 	 			ptable.proc[idx].ticks = 0;
@@ -416,7 +429,6 @@ scheduler(void)
 					enqueue(idx, ptable.proc[idx].level);
 				}
 				else {
-
 					int passval = getpvheap();
 					if(mlfqpv < passval || passval == -1)
 						passval = mlfqpv;
@@ -425,7 +437,6 @@ scheduler(void)
 				}
 			}
 			if(pbcount >= 100) {
-//				cprintf("pbcout: %d", pbcount);
 				pbcount = 0;
 				priorityboost();
 			}
@@ -483,7 +494,6 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;	
-	p->ticks++;
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }

@@ -12,7 +12,7 @@
 
 #define MLFQ_LEVEL		(3)	/* Number of level(priority) of MLFQ scheduler */
 
-#define WORKLOAD_NUM	(7) /* The number of workloads */
+#define WORKLOAD_NUM	(1) /* The number of workloads */
 
 /**
  * This function requests portion of CPU resources with given parameter
@@ -92,10 +92,8 @@ test_mlfq(int type)
 				curr_mlfq_level = getlev(); /* getlev : system call */
 				cnt_level[curr_mlfq_level]++;
 			}
-
 			/* Get current tick */
 			curr_tick = uptime();
-
 			if (curr_tick - start_tick > LIFETIME) {
 				/* Time to terminate */
 				break;
@@ -134,25 +132,18 @@ main(int argc, char *argv[])
 	/* Workload list */
 	struct workload workloads[WORKLOAD_NUM] = {
 		/* Process scheduled by Stride scheduler, use 5% of CPU resources */
-		//{test_stride, 5},
+//		{test_stride, 5},
 		/* Process scheduled by Stride scheduler, use 15% of CPU resources */
-		//{test_stride, 15},
+		//{test_stride, 50},
 		/* Process scheduled by MLFQ scheduler, does not yield itself */
-		{test_mlfq, MLFQ_LEVCNT},
+		//{test_mlfq, MLFQ_LEVCNT},
 		/* Process scheduled by MLFQ scheduler, does not yield itself */
-		//{test_mlfq, MLFQ_NONE},
-	//	{test_mlfq, MLFQ_LEVCNT_YIELD},
-//		{test_mlfq, MLFQ_YIELD},
+	//	{test_mlfq, MLFQ_NONE},
+	{test_mlfq, MLFQ_LEVCNT_YIELD},
+	//		{test_mlfq, MLFQ_YIELD}, 
 
-//		{test_mlfq, MLFQ_LEVCNT_YIELD},
-//		{test_mlfq, MLFQ_LEVCNT_YIELD},
-//		{test_mlfq, MLFQ_LEVCNT_YIELD},
-	{test_mlfq, MLFQ_LEVCNT},
-	{test_mlfq, MLFQ_LEVCNT},
-	{test_mlfq, MLFQ_LEVCNT},
-	{test_mlfq, MLFQ_LEVCNT},
-	{test_mlfq, MLFQ_LEVCNT},
-	{test_mlfq, MLFQ_LEVCNT},
+//		{test_mlfq, MLFQ_LEVCNT},
+//		{test_mlfq, MLFQ_LEVCNT},
 	};
 
 	for (i = 0; i < WORKLOAD_NUM; i++) {
