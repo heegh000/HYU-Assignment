@@ -132,18 +132,18 @@ main(int argc, char *argv[])
 	/* Workload list */
 	struct workload workloads[WORKLOAD_NUM] = {
 		/* Process scheduled by Stride scheduler, use 5% of CPU resources */
-	//{test_stride, 25},
+	//{test_stride, 5},
 		/* Process scheduled by Stride scheduler, use 15% of CPU resources */
-	//	{test_stride, 25},
+	//	{test_stride, 15},
 		/* Process scheduled by MLFQ scheduler, does not yield itself */
-		//{test_mlfq, MLFQ_LEVCNT},
+		{test_mlfq, MLFQ_LEVCNT},
 		/* Process scheduled by MLFQ scheduler, does not yield itself */
-//	{test_mlfq, MLFQ_NONE},
+	{test_mlfq, MLFQ_NONE},
 	//{test_mlfq, MLFQ_LEVCNT_YIELD},
 	//		{test_mlfq, MLFQ_YIELD}, 
 
-		{test_mlfq, MLFQ_LEVCNT},
-		{test_mlfq, MLFQ_LEVCNT},
+	//	{test_mlfq, MLFQ_LEVCNT},
+	
 	};
 
 	for (i = 0; i < WORKLOAD_NUM; i++) {
