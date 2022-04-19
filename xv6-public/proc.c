@@ -347,10 +347,10 @@ scheduler(void)
   // struct proc* p;
   struct cpu *c = mycpu();
   c->proc = 0;
+
   int idx = 0;
+  uint beforeproctick = 0;
   uint beforetick = 0;
-  uint aftertick = 0;
-  uint difftick =0;
 
   int minpv = 0;
   int pbcount = 0;
@@ -381,6 +381,7 @@ scheduler(void)
 
 
       beforetick = sys_uptime();
+      beforeproctick = ptable.proc[idx].ticks;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -403,13 +404,11 @@ scheduler(void)
       passti = 0;
       
       
-      mlfqtickets = 100 - sumtickets;
+      mlfqtickets = 100 - sumtickets; 
       
-      aftertick = sys_uptime();
-      difftick = aftertick - beforetick;
+      pbcount += sys_uptime() - beforetick;
       
-      pbcount += difftick;
-      mlfqpv += difftick * (BIGNUM / mlfqtickets);
+	  mlfqpv += (ptable.proc[idx].ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 
       if(ptable.proc[idx].level == 0 && ptable.proc[idx].ticks >= 5) {
          ptable.proc[idx].ticks = 0;
