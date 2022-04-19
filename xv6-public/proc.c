@@ -371,7 +371,7 @@ scheduler(void)
       if(idx == -1) {
       	if(istiin) {
        		mlfqtickets = 100 - sumtickets;
-        	mlfqpv += (BIGNUM/ 100) / mlfqtickets;	
+        	mlfqpv += BIGNUM / mlfqtickets;	
 			istiin = 0;
 		}
         release(&ptable.lock);
