@@ -363,18 +363,17 @@ scheduler(void)
   
     minpv = getpvheap();
 
-    //stride scheduler pick the mlfq scheduler
+    //pick the mlfq scheduler
     if(mlfqpv < minpv || minpv == -1) {
 
       idx = pickprocmlfq();  
   
       if(idx == -1) {
-        
-        if(istiin) {  
-          mlfqtickets = 100 - sumtickets;
-          mlfqpv += BIGNUM / mlfqtickets;
-          istiin = 0;
-        } 
+      	if(istiin) {
+       		mlfqtickets = 100 - sumtickets;
+        	mlfqpv += (BIGNUM/ 100) / mlfqtickets;	
+			istiin = 0;
+		}
         release(&ptable.lock);
         continue;
       }    
@@ -441,7 +440,7 @@ scheduler(void)
       c->proc = 0;
     }
 
-  //stride scheduler picks other proceesses
+  //picks other proceesses of the stride scheduler
   else {
       
       idx = heapdelete();
