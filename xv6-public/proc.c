@@ -577,12 +577,12 @@ wakeup1(void *chan)
       p->state = RUNNABLE;
       if(p->level != -1) {
 	    if (chan != &ticks) {
-			p->level = 0;
-			p->ticks = 0;
-       		enqueue(p->idx, 0);
+          p->level = 0;
+		  p->ticks = 0;
+       	  enqueue(p->idx, 0);
 		}
 		else {
-			enqueue(p->idx, p->level);
+	 	  enqueue(p->idx, p->level);
 		}
 
       }
