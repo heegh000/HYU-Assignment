@@ -170,7 +170,7 @@ def drawCube_glDrawArray():
     glDrawArrays(GL_TRIANGLES, 0, int(varr.size/6))
 
 def render():
-    global gCamAng, gCamHeight
+    global gCamAng, gCamHeight, zang1, xang, zang2
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
     glEnable(GL_DEPTH_TEST)
