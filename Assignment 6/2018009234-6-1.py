@@ -308,6 +308,7 @@ def main():
 if __name__ == "__main__":
     main()
 
+'''
 ###################################################
 # [Practice] Properties of Rotation Matrix
 def render():
@@ -382,3 +383,4 @@ def render():
     drawCube_glDrawArray()
 
     glDisable(GL_LIGHTING)
+'''
