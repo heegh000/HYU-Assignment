@@ -479,6 +479,11 @@ scheduler(void)
 	  mainth = &ptable.proc[idx];
 	  idx = thread_pick(idx);
 
+      if(idx == -1) {
+        release(&ptable.lock);
+		continue;
+	  }
+
       c->proc = &ptable.proc[idx];
       switchuvm(mainth);
 
