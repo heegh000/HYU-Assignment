@@ -18,7 +18,7 @@ func(void* arg)
 void*
 func2 (void* arg)
 {
-  int ret = 10;
+  int ret = (int) arg;
   printf(1, "addr: %d, arg: %d\n", &ret, ret);  
   printf(1, "Hello, Here is func2\n");
   thread_exit((void*)ret);
