@@ -1015,33 +1015,33 @@ thread_join (thread_t thread, void ** retval)
 	    continue;
 
       exist = 1;
-      if(p->state == ZOMBIE) { 
-	    *retval = p->retval;
-	    kfree(p->kstack);
+      if(p->state == ZOMBIE) {
+        *retval = p->retval;
+        kfree(p->kstack);
         p->kstack = 0;
-
-        for(i = 0; i < NTHREAD; i++)
-	      if(mainth->stack[i] == -1)
-            break;
+        
+		for(i = 0; i < NTHREAD; i++)
+          if(mainth->stack[i] == -1)
+		    break;
 	     
         mainth->stack[i] = p->stackbot;
 
         p->idx = 0;
-	    p->parent = 0;
-		p->state = UNUSED;
+        p->parent = 0;
+        p->state = UNUSED;
 
         p->nextth->prevth = p->prevth;
-	    p->prevth->nextth = p->nextth;
+        p->prevth->nextth = p->nextth;
 	    
-	    p->thid = 0;
-	    p->mainth = 0;
-	    p->nextth = 0;
-	    p->prevth = 0;
-	    p->recentth = 0;
-		p->runblenum = 0;
+        p->thid = 0;
+        p->mainth = 0;
+        p->nextth = 0;
+        p->prevth = 0;
+        p->recentth = 0;
+    	p->runblenum = 0;
 
-		release(&ptable.lock);
-	    return 0;
+        release(&ptable.lock);
+		return 0;
 	  }
 	}
 
