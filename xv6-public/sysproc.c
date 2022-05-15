@@ -50,7 +50,7 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
+  addr = myproc()->mainth->sz;
   if(growproc(n) < 0)
     return -1;
   return addr;
@@ -120,3 +120,98 @@ sys_set_cpu_share(void)
   return set_cpu_share(tickets);
 }
 
+int
+sys_thread_create(void)
+{
+  int thread;
+  int start_routine;
+  int arg;
+
+  if(argint(0, &thread) < 0)
+    return -1;
+  if(argint(1, &start_routine) < 0)
+    return -1;
+  if(argint(2, &arg) < 0)
+    return -1;
+  
+
+  return thread_create((thread_t*) thread, (void*) start_routine, (void*) arg);
+}
+
+
+int
+sys_thread_exit(void)
+{
+  int retval;
+
+  if(argint(0, &retval) < 0)
+    return -1;
+
+  thread_exit((void*) retval);
+
+  return -1;
+}
+
+int
+sys_thread_join(void)
+{
+  int thread;
+  int retval;
+
+  if(argint(0, &thread) < 0)
+    return -1;
+  if(argint(1, &retval) < 0)
+    return -1; 
+  
+  return thread_join((thread_t) thread, (void**) retval);
+  
+}
+
+/*
+int
+sys_thread_create(void)
+{
+  thread_t* arg0;
+  void* (*arg1)(void*);
+  void* arg2;
+
+  if(argint(0, (int*) &arg0) < 0)
+    return -1;
+  if(argint(1, (int*) &arg1) < 0)
+    return -1;
+  if(argint(2, (int*) &arg2) < 0)
+    return -1;
+  
+
+  return thread_create( arg0, arg1, arg2);
+}
+
+
+int
+sys_thread_exit(void)
+{
+  void* arg0;
+
+  if(argint(0,(int*) &arg0) < 0)
+    return -1;
+
+  thread_exit( arg0);
+
+  return -1;
+}
+
+int
+sys_thread_join(void)
+{
+  thread_t arg0;
+  void** arg1;
+
+  if(argint(0, (int*) &arg0) < 0)
+    return -1;
+  if(argint(1, (int*) &arg1) < 0)
+    return -1; 
+  
+  return thread_join(arg0, arg1);
+  
+}
+*/

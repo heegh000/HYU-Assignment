@@ -11,5 +11,15 @@
 #define LOGSIZE      (MAXOPBLOCKS*3)  // max data blocks in on-disk log
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
-#define MAXCAPACITY  65 // max capacity of processes for mlfq, minheap
+#define MAXCAPACITY  (NPROC+1) // max capacity of processes for mlfq, minheap
 #define BIGNUM       10000 // for stride scheduling
+#define NTHREAD      10  // maximum number of thread per process
+#define HLEVEL        0  // high level
+#define MLEVEL        1  // middle level
+#define LLEVEL        2  // low level
+#define HALLOT       20  // time allotment of high queue
+#define MALLOT       40  // time allotment of middle queue
+#define HQUANTUM      5  // time quantum of high queue
+#define MQUANTUM     10  // time quantum of middle queue
+#define LQUANTUM     20  // time quantum of low queue
+

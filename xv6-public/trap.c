@@ -109,29 +109,23 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
     tf->trapno == T_IRQ0+IRQ_TIMER) {
-    
-//    acquire(&tickslock);
-  
-    addtick(myproc()->idx, 1);
-    if(myproc()->level == -1 || myproc()->level == 0) {
-      addtick(myproc()->idx, -1);
-//      release(&tickslock);
+
+    passti++;
+    addtick(myproc()->mainth->idx, 1);
+    if((myproc()->mainth->level == -1 || myproc()->mainth->level == 0) && passti == HQUANTUM) {
+      addtick(myproc()->mainth->idx, -1);
       yield();  
     } 
-    else {
-        passti++;
-        if(myproc()->level == 1 && passti == 2) {
-          addtick(myproc()->idx, -1);
-//          release(&tickslock);
-          yield();
-        } 
-        else if(myproc()->level == 2 && passti == 4) {
-          addtick(myproc()->idx, -1);
-//          release(&tickslock);
-          yield();
-        }
-//        else 
-//          release(&tickslock);
+    else if(myproc()->mainth->level == 1 && passti == MQUANTUM) {
+      addtick(myproc()->mainth->idx, -1);
+      yield();
+    } 
+    else if(myproc()->mainth->level == 2 && passti == LQUANTUM) {
+      addtick(myproc()->mainth->idx, -1);
+      yield();
+    }	
+	else {
+      thread_yield();
     }
   }
 

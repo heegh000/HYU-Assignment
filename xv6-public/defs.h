@@ -125,6 +125,17 @@ void            priorityboost(void);
 int             getlev(void);
 int             updatesumtickets(void);
 int             set_cpu_share(int);
+int             yield_no_thread(void);
+int             thread_create(thread_t*, void*(void*), void*);
+void            thread_exit(void*);
+int             thread_join(thread_t, void**);
+void            thread_scheduler(void);
+void            thread_sched(void);
+int             thread_yield(void);
+void            thread_sleep(void*, struct spinlock*);
+//void            thread_wakeup(void*);
+int             thread_pick(int);
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);

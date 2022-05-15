@@ -26,8 +26,9 @@ exec(char *path, char **argv)
     cprintf("exec: fail\n");
     return -1;
   }
+  
   ilock(ip);
-  pgdir = 0;
+  pgdir = 0;  
 
   // Check ELF header
   if(readi(ip, (char*)&elf, 0, sizeof(elf)) != sizeof(elf))
@@ -99,6 +100,13 @@ exec(char *path, char **argv)
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
+
+  curproc->mainth = curproc;
+  curproc->nextth = curproc;
+  curproc->prevth = curproc;
+  curproc->recentth = curproc;
+  curproc->runblenum = 0;
+
   switchuvm(curproc);
   freevm(oldpgdir);
   return 0;
