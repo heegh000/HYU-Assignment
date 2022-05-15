@@ -8,6 +8,8 @@
 // three queues that have each different priority level
 struct cqueue mlfq[3];
 
+extern struct proc* myproc(void);
+
 int 
 isempty (int level) 
 {
@@ -29,8 +31,17 @@ isfull (int level)
 
 // return the input value on success or -1 on failure
 int
-enqueue(int idx, int level) 
+enqueue(int idx, int level)
 {
+  int i = 0;
+  if(!isempty(level)) {
+    for(i = mlfq[level].head +1; i != mlfq[level].tail; i = (i+1) % MAXCAPACITY)
+      if(mlfq[level].procidx[i] == idx)
+	    return -1;
+    if (mlfq[level].procidx[i] == idx)
+      return -1;
+  }
+  
   if(isfull(level))
     return -1;
 
