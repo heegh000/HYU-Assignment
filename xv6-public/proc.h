@@ -53,21 +53,20 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int stack[NTHREAD];
 
   // for all thread;
-  thread_t thid;
-  struct proc *mainth;
-  struct proc *nextth;
-  struct proc *prevth;
-  int stackbot;
-  void *retval;
+  thread_t thid;               // thread ID
+  struct proc *mainth;         // for accessing the member of main thread
+  struct proc *nextth;         // next thread for thread scheduling
+  struct proc *prevth;         // prev thread for thread scheduling
+  int stackbot;                // stack address that the thread is using
+  void *retval;                // return value
   
   //for main thread
-  thread_t nextid;
-  struct proc *recentth;
-  int runblenum;
-
+  thread_t nextid;             // thread ID
+  struct proc *recentth;       // recent thread
+  int runblenum;               // number of runnalbe thread
+  int stack[NTHREAD];          // If there is a empty space, the value is not -1
 };
 
 // Process memory is laid out contiguously, low addresses first:
