@@ -25,11 +25,9 @@ int sumtickets = 0;
 extern void forkret(void);
 extern void trapret(void);
 
-extern int istiin;
 extern int sys_uptime();
 extern int passti;
 extern struct spinlock tickslock;
-
 
 extern struct node strheap[3];
 
@@ -204,7 +202,7 @@ growproc(int n)
     if((sz = deallocuvm(curproc->mainth->pgdir, sz, sz + n)) == 0)
       return -1;
   }
-  curproc->sz = sz;
+  curproc->mainth->sz = sz;
   switchuvm(curproc);
   return 0;
 }
@@ -224,14 +222,14 @@ fork(void)
   }
 
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->mainth->pgdir, curproc->sz)) == 0){
+  if((np->pgdir = copyuvm(curproc->mainth->pgdir, curproc->mainth->sz)) == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
     return -1;
   }
 
-  np->sz = curproc->sz;
+  np->sz = curproc->mainth->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
 
@@ -243,7 +241,7 @@ fork(void)
       np->ofile[i] = filedup(curproc->ofile[i]);
   np->cwd = idup(curproc->cwd);
 
-  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+  safestrcpy(np->name, curproc->mainth->name, sizeof(curproc->mainth->name));
 
   pid = np->pid;
 
@@ -262,45 +260,95 @@ fork(void)
 void
 exit(void)
 {
-  struct proc *curproc = myproc();
+  struct proc *cur = myproc();
   struct proc *p;
   int fd;
 
-  if(curproc == initproc)
+  if(cur == initproc)
     panic("init exiting");
+
+  clear_thread(cur->idx);
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
-    if(curproc->ofile[fd]){
-      fileclose(curproc->ofile[fd]);
-      curproc->ofile[fd] = 0;
+    if(cur->ofile[fd]){
+      fileclose(cur->ofile[fd]);
+      cur->ofile[fd] = 0;
     }
   }
+
   begin_op();
-  iput(curproc->cwd);
+  iput(cur->cwd);
   end_op();
-  curproc->cwd = 0;
+  cur->cwd = 0;
 
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
+  wakeup1(cur->parent);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == curproc){
+    if(p->parent == cur){
       p->parent = initproc;
       if(p->state == ZOMBIE)
-        wakeup(initproc);
+        wakeup1(initproc);
     }
   }
 
   // Jump into the scheduler, never to return.
-  curproc->state = ZOMBIE;
-  sumtickets -= curproc->tickets;
+  cur->state = ZOMBIE;
+  sumtickets -= cur->tickets;
 
   sched();
   panic("zombie exit");
+}
+
+void
+clear_thread(int idx) {
+  
+  struct proc *cur = &ptable.proc[idx];
+  struct proc *p;
+  int fd;
+
+  for(p = cur->nextth; p != cur; p = p->nextth) {
+    if(p->state != ZOMBIE) {
+      for(fd = 0; fd < NOFILE; fd++) {
+        if(p->ofile[fd]) {
+          fileclose(p->ofile[fd]);
+          p->ofile[fd] = 0;
+        }
+      }
+      
+      begin_op();
+      iput(p->cwd);
+      end_op();
+      p->cwd = 0;
+    }
+  }
+  
+  acquire(&ptable.lock);
+  
+  cur->pgdir = cur->mainth->pgdir;
+  //cur->parent = cur->mainth->parent;
+  cur->pid = cur->mainth->pid;
+  cur->tickets = cur->mainth->tickets;
+  cur->runblenum = cur->mainth->runblenum;
+ 
+  for(p = cur->nextth; p != cur; p = p->nextth) {
+    kfree(p->kstack);
+    p->kstack = 0;
+    p->idx = 0;
+    p->parent = 0;
+    p->join = 0;
+    p->state = UNUSED;
+    p->thid = 0;
+    p->killed = 0;
+    cur->runblenum--;
+  }
+  
+  
+  release(&ptable.lock);
 }
 
 // Wait for a child process to exit and return its pid.
@@ -336,6 +384,12 @@ wait(void)
         p->tickets = 0;
         p->state = UNUSED;
 
+
+        p->thid = 0;
+        p->mainth = 0;
+        p->nextth = 0;
+        p->prevth = 0;
+        p->recentth = 0;
 		p->runblenum = 0;
 
         release(&ptable.lock);
@@ -377,6 +431,7 @@ scheduler(void)
 
   int minpv = 0;
   int pbcount = 0;
+  int mlfqpvadd = 0;  
 
   for(;;){
     // Enable interrupts on this processor.
@@ -392,10 +447,11 @@ scheduler(void)
       idx = pickprocmlfq();  
  
       if(idx == -1) {
-      	if(istiin) {
+        mlfqpvadd++;
+      	if(mlfqpvadd >= 100) {
        		mlfqtickets = 100 - sumtickets;
         	mlfqpv += BIGNUM / mlfqtickets;	
-			istiin = 0;
+			mlfqpvadd = 0;
 		}
         release(&ptable.lock);
         continue;
@@ -404,10 +460,12 @@ scheduler(void)
       mainth = &ptable.proc[idx];
 
       idx = thread_pick(idx);
+      
       if(idx == -1) {
         release(&ptable.lock);
 		continue;
 	  }
+
       beforetick = sys_uptime();
       beforeproctick = mainth->ticks;
 
@@ -416,11 +474,11 @@ scheduler(void)
       // before jumping back to us.
 
       c->proc = &ptable.proc[idx];
-      switchuvm(&ptable.proc[idx]);
+	  switchuvm(&ptable.proc[idx]);
       
 	  ptable.proc[idx].state = RUNNING; 
-	  mainth->runblenum--;
-      
+	  mainth->runblenum--;      
+
       if(mainth->ticks == (MALLOT - 1) && mainth->level == 1 && ptable.proc[idx].killed == 0) {
         acquire(&tickslock);
         passti += 1;
@@ -429,7 +487,7 @@ scheduler(void)
 
       swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
-      
+
       mainth->ticks++;
       passti = 0;
       
@@ -444,12 +502,13 @@ scheduler(void)
          mainth->ticks = 0;
          mainth->level = MLEVEL;
       }
+
       else if(mainth->level == MLEVEL && mainth->ticks >= MALLOT) {  
          mainth->ticks = 0;
          mainth->level = LLEVEL;
       }    
   
-      if(mainth->runblenum >= 1) {
+      if(mainth->runblenum > 0) {
         if(mainth->level != -1) {
 		  enqueue(mainth->idx, mainth->level);
         }
@@ -478,14 +537,15 @@ scheduler(void)
 
 	  mainth = &ptable.proc[idx];
 	  idx = thread_pick(idx);
-
       if(idx == -1) {
         release(&ptable.lock);
 		continue;
 	  }
+     
+      beforeproctick = mainth->ticks;
 
       c->proc = &ptable.proc[idx];
-      switchuvm(mainth);
+      switchuvm(&ptable.proc[idx]);
 
       ptable.proc[idx].state = RUNNING; 
 	  mainth->runblenum--;
@@ -493,8 +553,11 @@ scheduler(void)
       swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
 
+      mainth->ticks++;
+      passti = 0;
+
       if(mainth->runblenum >= 1) {
-        minpv += BIGNUM / mainth->tickets;
+        minpv += (BIGNUM / mainth->tickets) * (mainth->ticks - beforeproctick);
         heapinsert(mainth->idx, minpv);
       }
 
@@ -517,7 +580,7 @@ sched(void)
 {
   int intena;
   struct proc *p = myproc();
-
+  
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1) {
@@ -594,7 +657,11 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;  
-  sched();
+  
+  if(p->mainth->runblenum > 0) 
+    thread_sched();
+  else
+    sched();
 
   // Tidy up.
   p->chan = 0;
@@ -605,6 +672,7 @@ sleep(void *chan, struct spinlock *lk)
     acquire(lk);
   }
 }
+
 
 //PAGEBREAK!
 // Wake up all processes sleeping on chan.
@@ -622,7 +690,8 @@ wakeup1(void *chan)
       p->state = RUNNABLE;
 	  mainth = p->mainth;
 	  mainth->runblenum ++;
-      if(mainth->runblenum == 1) {
+      
+	  if(mainth->runblenum == 1) {
         
         if(mainth->level != -1) {
   	      if (chan != &ticks) {
@@ -643,7 +712,7 @@ wakeup1(void *chan)
   
           heapinsert(mainth->idx, passval);
         }  
-     }
+      }
     }
   }
 }
@@ -664,16 +733,18 @@ int
 kill(int pid)
 {
   struct proc *p;
+  struct proc *th;
   struct proc *mainth;
+  int passval;
 
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->killed = 1;
+      mainth = p->mainth;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
-        mainth = p->mainth;
 		mainth->runblenum++;
         
         if(mainth->runblenum == 1) {
@@ -684,7 +755,7 @@ kill(int pid)
             enqueue(mainth->idx, HLEVEL);
           }
           else {
-            int passval = getpvheap();
+            passval = getpvheap();
       
             if(mlfqpv < passval || passval == -1)
               passval = mlfqpv;
@@ -693,6 +764,32 @@ kill(int pid)
           }
         }
       }
+      
+      for(th = p->nextth; th != p; th = th->nextth) {
+        th->killed = 1;
+        if(th->state == SLEEPING) {
+          th->state = RUNNABLE;
+          mainth->runblenum++; 
+          
+          if(mainth->runblenum == 1) {
+ 
+            if(mainth->level != -1) {
+              mainth->level = HLEVEL;
+              mainth->ticks = 0;
+              enqueue(mainth->idx, HLEVEL);
+            }
+            else {
+              passval = getpvheap();
+      
+              if(mlfqpv < passval || passval == -1)
+                passval = mlfqpv;
+      
+              heapinsert(mainth->idx, passval);
+            }
+          }
+        }
+      }
+
       release(&ptable.lock);
       return 0;
     }
@@ -728,7 +825,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %d %s %s", p->pid, p->thid,state, p->name);
+    cprintf("%d %d %d %s %s %d", p->idx,p->pid, p->thid,state, p->name, p->mainth->runblenum);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
@@ -860,7 +957,8 @@ found:
   p->pid = mainth->pid;
   p->state = EMBRYO;
   p->idx = p - ptable.proc;
-  p->parent = cur;
+  p->parent = mainth->parent;
+  p->join = cur;
   p->pgdir = mainth->pgdir;
   p->thid = ++mainth->nextid;
   p->mainth = mainth;
@@ -933,7 +1031,7 @@ thread_create(thread_t* thread, void* (*start_routine) (void*), void *arg)
   }
   else {
     sz = mainth->sz;
-
+    sz = PGROUNDUP(sz);
 	if( (sz = allocuvm(mainth->pgdir, sz, sz + 2*PGSIZE)) == 0) {
       kfree(th->kstack);
 	  th->kstack = 0;
@@ -991,8 +1089,7 @@ thread_exit(void *retval)
 
   acquire(&ptable.lock);
   
-  thread_wakeup1((void*)cur->thid);
-
+  thread_wakeup1(cur->join);
   cur->retval = retval;
   cur->state = ZOMBIE;
   thread_sched();
@@ -1016,7 +1113,7 @@ thread_join (thread_t thread, void ** retval)
     exist = 0;
     
 	for(p = cur->nextth; p != cur; p = p->nextth) {
-      if(p->thid != thread)
+      if(p->thid != thread || p->join != cur)
 	    continue;
 
       exist = 1;
@@ -1033,6 +1130,7 @@ thread_join (thread_t thread, void ** retval)
 
         p->idx = 0;
         p->parent = 0;
+        p->join = 0;
         p->state = UNUSED;
 
         p->nextth->prevth = p->prevth;
@@ -1042,9 +1140,7 @@ thread_join (thread_t thread, void ** retval)
         p->mainth = 0;
         p->nextth = 0;
         p->prevth = 0;
-        p->recentth = 0;
-    	p->runblenum = 0;
-
+        
         release(&ptable.lock);
 		return 0;
 	  }
@@ -1055,7 +1151,7 @@ thread_join (thread_t thread, void ** retval)
 	  return -1;
 	}
     
-    thread_sleep((void*)thread, &ptable.lock);
+    sleep(cur, &ptable.lock);
   }
 }
 
@@ -1069,8 +1165,7 @@ thread_scheduler(void)
   
   if(cur->mainth->runblenum == 0) {
 	yield_no_thread();
-  }
- 
+  } 
   else {
     for(p = cur->nextth; p != cur; p = p->nextth) {
       if(p->state != RUNNABLE)
@@ -1078,8 +1173,8 @@ thread_scheduler(void)
       
         
       p->state = RUNNING;
-      p->mainth->recentth = p;
       p->mainth->runblenum--;
+      p->mainth->recentth = p;
       mycpu()->proc = p;
 	  switchuvm(p);
       swtch(&cur->context, p->context);
@@ -1099,7 +1194,6 @@ thread_sched(void)
 {
   int intena;
   struct proc *p = myproc(); 
-    
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1) {
@@ -1183,7 +1277,7 @@ thread_wakeup1(void *chan)
   struct proc *cur = myproc();
 
   for(p = cur->nextth; p != cur; p = p->nextth) {
-    if(p->state == SLEEPING && p->chan == chan && p == cur->mainth) { 
+    if(p->state == SLEEPING && p->chan == chan && p == cur->join) { 
 	  p->state = RUNNABLE;
 	  p->mainth->runblenum++;
     }
@@ -1221,5 +1315,63 @@ thread_pick(int idx)
   return -1;
 }
 
+void 
+prepare_exec (int idx)
+{
+  struct proc *cur = &ptable.proc[idx];
+  struct proc *mainth = cur->mainth;
+  struct proc *p;
+  int i, fd;  
 
+  for(p = cur->nextth; p != cur; p = p->nextth) {
+    if(p->state != ZOMBIE) {
+      
+      for(fd = 0; fd < NOFILE; fd++) {
+        if(p->ofile[fd]) {
+          fileclose(p->ofile[fd]);
+          p->ofile[fd] = 0;
+        }
+      }
+      
+      begin_op();
+      iput(p->cwd);
+      end_op();
+      p->cwd = 0;
+    }
+  }
+  acquire(&ptable.lock);
+  
+  cur->pid = mainth->pid;
+  cur->level =  mainth->level;
+  cur->ticks = mainth->ticks;
+  cur->tickets = mainth->tickets;
+  cur->parent = mainth->parent;
+  cur->killed = mainth->killed;  
+    
+  cur->thid = 0;
+  cur->nextid = 0;
 
+  
+  for(i = 0; i < NTHREAD; i++)
+    cur->stack[i] = -1;
+
+  
+  for(p = cur->nextth; p != cur; p = p->nextth) {
+    kfree(p->kstack);
+    p->kstack = 0;
+    p->killed = 0; 
+    p->idx = 0;
+    p->parent = 0;
+    p->join = 0;
+    p->state = UNUSED;
+    p->thid = 0;    
+  }
+
+  cur->mainth = cur;
+  cur->nextth = cur;
+  cur->prevth = cur;
+  cur->recentth = cur;
+  cur->runblenum = 0;
+
+  release(&ptable.lock);
+}

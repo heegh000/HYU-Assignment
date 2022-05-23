@@ -7,7 +7,6 @@
 
 // three queues that have each different priority level
 struct cqueue mlfq[3];
-
 extern struct proc* myproc(void);
 
 int 
@@ -33,16 +32,18 @@ isfull (int level)
 int
 enqueue(int idx, int level)
 {
-  int i = 0;
+  int i = 0; 
+
   if(!isempty(level)) {
-    for(i = mlfq[level].head +1; i != mlfq[level].tail; i = (i+1) % MAXCAPACITY)
-      if(mlfq[level].procidx[i] == idx)
-	    return -1;
+    for(i = mlfq[level].head +1; i != mlfq[level].tail; i = (i+1) % MAXCAPACITY) {
+      if(mlfq[level].procidx[i] == idx) 
+	   return -1;
+    }
     if (mlfq[level].procidx[i] == idx)
       return -1;
   }
   
-  if(isfull(level))
+  if(isfull(level)) 
     return -1;
 
   mlfq[level].tail = (mlfq[level].tail+1) % MAXCAPACITY;
@@ -55,12 +56,15 @@ enqueue(int idx, int level)
 int
 dequeue(int level)
 {
+  int retval;
   if (isempty(level))
     return -1;
-
+  
+  
   mlfq[level].head = (mlfq[level].head + 1) % MAXCAPACITY;
-
-  return mlfq[level].procidx[mlfq[level].head];
+  retval = mlfq[level].procidx[mlfq[level].head];
+  mlfq[level].procidx[mlfq[level].head] = -1;
+  return retval;
 }
 
 

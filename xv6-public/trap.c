@@ -16,7 +16,6 @@ struct spinlock tickslock;
 uint ticks;
 
 int passti = 0;
-int istiin = 0;
 
 void
 tvinit(void)
@@ -55,7 +54,6 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
-      istiin = 1;  
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -109,18 +107,17 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
     tf->trapno == T_IRQ0+IRQ_TIMER) {
-
     passti++;
     addtick(myproc()->mainth->idx, 1);
-    if((myproc()->mainth->level == -1 || myproc()->mainth->level == 0) && passti == HQUANTUM) {
+    if( myproc()->mainth->level <= 0 && passti >= HQUANTUM) {
       addtick(myproc()->mainth->idx, -1);
       yield();  
     } 
-    else if(myproc()->mainth->level == 1 && passti == MQUANTUM) {
+    else if(myproc()->mainth->level == 1 && passti >= MQUANTUM) {
       addtick(myproc()->mainth->idx, -1);
       yield();
     } 
-    else if(myproc()->mainth->level == 2 && passti == LQUANTUM) {
+    else if(myproc()->mainth->level == 2 && passti >= LQUANTUM) {
       addtick(myproc()->mainth->idx, -1);
       yield();
     }	

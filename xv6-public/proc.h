@@ -46,6 +46,7 @@ struct proc {
   uint ticks;                  // How long the process runs
   int tickets;                 // CPU resources of the process
   struct proc *parent;         // Parent process
+  struct proc *join;
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
   void *chan;                  // If non-zero, sleeping on chan

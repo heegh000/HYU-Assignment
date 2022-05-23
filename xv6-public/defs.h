@@ -135,7 +135,8 @@ int             thread_yield(void);
 void            thread_sleep(void*, struct spinlock*);
 //void            thread_wakeup(void*);
 int             thread_pick(int);
-
+void            clear_thread(int);
+void            prepare_exec(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

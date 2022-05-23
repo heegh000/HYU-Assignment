@@ -133,7 +133,6 @@ sys_thread_create(void)
     return -1;
   if(argint(2, &arg) < 0)
     return -1;
-  
 
   return thread_create((thread_t*) thread, (void*) start_routine, (void*) arg);
 }

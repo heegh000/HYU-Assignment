@@ -14,6 +14,12 @@ heapinsert(int idx, int passval)
 {
 	if (heapcapa == MAXCAPACITY - 1)
 		return -1;
+    
+    if(heapcapa != 0) {
+      for(int i = 0; i < heapcapa; i++) 
+        if(strheap[i].idx == idx)
+          return -1;
+    }
 
 	int idxtemp;
 	int passtemp;
@@ -66,6 +72,9 @@ heapdelete()
 	
 	strheap[1].idx = strheap[heapcapa].idx;
 	strheap[1].passval = strheap[heapcapa].passval;
+
+    strheap[heapcapa].idx = -1;
+    strheap[heapcapa].passval = -1;
 
 	heapcapa--;
 
