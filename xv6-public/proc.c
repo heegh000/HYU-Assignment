@@ -1044,12 +1044,20 @@ thread_create(thread_t* thread, void* (*start_routine) (void*), void *arg)
     sz = PGROUNDUP(sz);
 	if( (sz = allocuvm(mainth->pgdir, sz, sz + 2*PGSIZE)) == 0) {
       kfree(th->kstack);
-	  th->kstack = 0;
+	  
+      th->kstack = 0;
 	  mainth->prevth = th->prevth;
 	  th->prevth->nextth = mainth;
 	 
 	  th->state = UNUSED;
-
+      th->pid = 0;
+      th->parent = 0;
+      th->join = 0;
+      th->pgdir = 0;
+      th->thid = 0;
+      th->mainth = 0;
+      th->nextth = 0;
+      th->prevth = 0;
       release(&ptable.lock);
 	  return -1;
 	}
@@ -1064,7 +1072,31 @@ thread_create(thread_t* thread, void* (*start_routine) (void*), void *arg)
   ustack[1] = (uint) arg;
   usp -= 8;
   
-  copyout(mainth->pgdir, usp, ustack, 8);
+  if( copyout(mainth->pgdir, usp, ustack, 8) < 0) {
+    kfree(th->kstack); 
+    th->kstack = 0;
+        
+    mainth->prevth = th->prevth;
+    th->prevth->nextth = mainth;
+    
+    for(i = 0; i < NTHREAD; i++) 
+      if(mainth->stack[i] == -1)
+        break;
+    
+    mainth->stack[i] = usp + 8;
+
+    th->state = UNUSED;
+    th->pid = 0;
+    th->parent = 0;
+    th->join = 0;
+    th->pgdir = 0;
+    th->thid = 0;
+    th->mainth = 0;
+    th->nextth = 0;
+    th->prevth = 0;
+    release(&ptable.lock);
+    return -1;
+  }
 
   th->tf->eip = (uint)start_routine;
   th->tf->esp = usp;
@@ -1137,15 +1169,17 @@ thread_join (thread_t thread, void ** retval)
 		    break;
 	     
         mainth->stack[i] = p->stackbot;
-
+        
+        p->pid = 0;
         p->idx = 0;
         p->parent = 0;
-        p->join = 0;
+        p->name[0] = 0;
         p->state = UNUSED;
 
         p->nextth->prevth = p->prevth;
         p->prevth->nextth = p->nextth;
 	    
+        p->join = 0;
         p->thid = 0;
         p->mainth = 0;
         p->nextth = 0;
