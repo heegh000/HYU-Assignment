@@ -23,9 +23,9 @@ func(void* arg)
   sleep(10);
   printf(1, "Hello Im func addr: %d\n", &addr);
   sleep(5);
-  temp = sbrk(20 * 2);
-  printf(1, "%d sbrk %d\n", ret,temp);
-//  thread_create(&th, func2, (void*) 200);
+  temp = malloc(3000 * 2);
+  printf(1, "thread%d malloc %d\n", ret,temp);
+//  thread_create(&th, func2, (void*) 30000);
   
 //  thread_join(th, &retval);
   
@@ -49,16 +49,16 @@ main(int argc, char *argv[])
   thread_create(&th[0], func, (void*) 0);
   thread_join(th[0], &retval[0]);
   
-  temp = sbrk(20 * 2);
-  printf(1, "user0 sbrk %d\n", temp);
+  temp = malloc(3000 * 2);
+  printf(1, "main0 malloc %d\n", temp);
 
 
   thread_create(&th[0], func, (void*) 0);
   thread_create(&th[1], func, (void*) 1);
   thread_join(th[0], &retval[0]);
   thread_join(th[1], &retval[1]);
-  temp = sbrk(20 * 2);
-  printf(1, "user1 sbrk %d\n", temp);
+  temp = malloc(3000 * 2);
+  printf(1, "main1 malloc %d\n", temp);
 
   thread_create(&th[0], func, (void*) 0);
   thread_create(&th[1], func, (void*) 1);
@@ -66,7 +66,7 @@ main(int argc, char *argv[])
   thread_join(th[0], &retval[0]);
   thread_join(th[1], &retval[1]);
   thread_join(th[2], &retval[2]);
-  temp = sbrk(20 * 2);
-  printf(1, "user2 sbrk %d\n", temp);
+  temp = malloc(3000 * 2);
+  printf(1, "main2 malloc %d\n", temp);
   exit();
 }
