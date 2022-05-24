@@ -267,8 +267,21 @@ exit(void)
   if(cur == initproc)
     panic("init exiting");
 
-  clear_thread(cur->idx);
-
+  for(p = cur->nextth; p != cur; p = p->nextth) {
+    if(p->state != ZOMBIE) {
+      for(fd = 0; fd < NOFILE; fd++) {
+        if(p->ofile[fd]) {
+          fileclose(p->ofile[fd]);
+          p->ofile[fd] = 0;
+        }
+      }
+      
+      begin_op();
+      iput(p->cwd);
+      end_op();
+      p->cwd = 0;
+    }
+  }
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
     if(cur->ofile[fd]){
@@ -284,12 +297,14 @@ exit(void)
 
   acquire(&ptable.lock);
 
+  clear_thread(cur->idx);
+
   // Parent might be sleeping in wait().
   wakeup1(cur->parent);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent->pid == cur->pid){
+    if(p->parent == cur || p->parent->pid == cur->pid){
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
@@ -309,25 +324,9 @@ clear_thread(int idx) {
   
   struct proc *cur = &ptable.proc[idx];
   struct proc *p;
-  int fd;
+  int i = 0;  
 
-  for(p = cur->nextth; p != cur; p = p->nextth) {
-    if(p->state != ZOMBIE) {
-      for(fd = 0; fd < NOFILE; fd++) {
-        if(p->ofile[fd]) {
-          fileclose(p->ofile[fd]);
-          p->ofile[fd] = 0;
-        }
-      }
-      
-      begin_op();
-      iput(p->cwd);
-      end_op();
-      p->cwd = 0;
-    }
-  }
-  
-  acquire(&ptable.lock);
+  //acquire(&ptable.lock);
   
   cur->pgdir = cur->mainth->pgdir;
   //cur->parent = cur->mainth->parent;
@@ -338,17 +337,25 @@ clear_thread(int idx) {
   for(p = cur->nextth; p != cur; p = p->nextth) {
     kfree(p->kstack);
     p->kstack = 0;
-    p->idx = 0;
+    p->pid = 0;
     p->parent = 0;
-    p->join = 0;
-    p->state = UNUSED;
-    p->thid = 0;
+    p->name[0] = 0;
     p->killed = 0;
+    p->level = 0;
+    p->idx = 0;
+    p->ticks = 0;
+    p->tickets = 0;
+    p->state = UNUSED;
+    p->join = 0;
+
+    for(i = 0; i < NTHREAD; i++)
+      p->stack[i] = -1;
+
     cur->runblenum--;
   }
   
   
-  release(&ptable.lock);
+ // release(&ptable.lock);
 }
 
 // Wait for a child process to exit and return its pid.
@@ -359,7 +366,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+  int i;
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -384,7 +391,7 @@ wait(void)
         p->tickets = 0;
         p->state = UNUSED;
 
-
+        p->join = 0;
         p->thid = 0;
         p->mainth = 0;
         p->nextth = 0;
@@ -392,6 +399,9 @@ wait(void)
         p->recentth = 0;
 		p->runblenum = 0;
 
+        for(i = 0; i < NTHREAD; i++)
+          p->stack[i] = -1;
+        
         release(&ptable.lock);
         return pid;
       }
@@ -1359,14 +1369,21 @@ prepare_exec (int idx)
   for(p = cur->nextth; p != cur; p = p->nextth) {
     kfree(p->kstack);
     p->kstack = 0;
-    p->killed = 0; 
-    p->idx = 0;
+    p->pid = 0;
     p->parent = 0;
-    p->join = 0;
+    p->name[0] = 0;
+    p->killed = 0;
+    p->level = 0;
+    p->idx = 0;
+    p->ticks = 0;
+    p->tickets = 0;
     p->state = UNUSED;
+    p->join = 0;
     p->thid = 0;    
+    for(i = 0; i < NTHREAD; i++)
+      p->stack[i] = -1;
   }
-
+  
   cur->mainth = cur;
   cur->nextth = cur;
   cur->prevth = cur;

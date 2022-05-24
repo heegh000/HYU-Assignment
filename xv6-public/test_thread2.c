@@ -45,8 +45,7 @@ volatile int gcnt;
 int gpipe[2];
 
 int (*testfunc[NTEST])(void) = {
- // racingtest,
-  sbrktest,
+  racingtest,
   basictest,
   jointest1,
   jointest2,
