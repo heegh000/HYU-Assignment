@@ -13,8 +13,8 @@ typedef struct x{
 
 
 typedef struct rw{
-  xem_t readlock;
-  xem_t writelock;
+  xem_t racelock;
+  xem_t starvlock;
   xem_t sharelock;
   int reader;
 } rwlock_t;
