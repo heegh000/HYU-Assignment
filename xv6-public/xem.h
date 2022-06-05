@@ -1,5 +1,5 @@
 struct wqueue {
-  int arr[15+1];
+  int arr[NTHREAD+1];
   int head;
   int tail;	
 };
