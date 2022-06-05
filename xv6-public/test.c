@@ -85,7 +85,7 @@ main(int argc, char *argv[])
   }
   printf(1, "\nIts sequence could be messy\n");
   exit();
-}
+} 
 /*
 #include "types.h"
 #include "stat.h"
@@ -158,4 +158,5 @@ main(int argc, char *argv[])
   temp = malloc(3000 * 2);
   printf(1, "main2 malloc %d\n", temp);
   exit();
-}*/
+}
+*/
