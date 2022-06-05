@@ -19,6 +19,8 @@ int stresstest(void);
 volatile int gcnt;
 int gpipe[2];
 
+
+
 int (*testfunc[NTEST])(void) = {
   racingtest,
   basictest,

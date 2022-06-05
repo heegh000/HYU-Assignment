@@ -13,7 +13,7 @@
 #define FSSIZE       1000  // size of file system in blocks
 #define MAXCAPACITY  (NPROC+1) // max capacity of processes for mlfq, minheap
 #define BIGNUM       10000 // for stride scheduling
-#define NTHREAD      20  // maximum number of thread per process
+#define NTHREAD      15  // maximum number of thread per process
 #define HLEVEL        0  // high level
 #define MLEVEL        1  // middle level
 #define LLEVEL        2  // low level

@@ -232,7 +232,6 @@ fork(void)
   np->sz = curproc->mainth->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
-
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
 
@@ -347,7 +346,7 @@ clear_thread(int idx) {
     p->tickets = 0;
     p->state = UNUSED;
     p->join = 0;
-
+    p->recentth = 0;
     for(i = 0; i < NTHREAD; i++)
       p->stack[i] = -1;
 
@@ -499,13 +498,10 @@ scheduler(void)
       switchkvm();
 
       mainth->ticks++;
-      passti = 0;
-      
-      
-      mlfqtickets = 100 - sumtickets; 
-      
+      passti = 0; 
+     
+      mlfqtickets = 100 - sumtickets;  
       pbcount += sys_uptime() - beforetick;
-      
 	  mlfqpv += (mainth->ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 
       if(mainth->level == HLEVEL && mainth->ticks >= HALLOT) {
@@ -704,7 +700,7 @@ wakeup1(void *chan)
 	  if(mainth->runblenum == 1) {
         
         if(mainth->level != -1) {
-  	      if (chan != &ticks) {
+  	      if(chan == &ticks) {
             mainth->level = 0;
   		    mainth->ticks = 0;
 			enqueue(mainth->idx, HLEVEL);
@@ -733,6 +729,14 @@ wakeup(void *chan)
 {
   acquire(&ptable.lock);
   wakeup1(chan);
+  release(&ptable.lock);
+}
+
+void
+xem_wakeup(int idx)
+{
+  acquire(&ptable.lock);
+  wakeup1(&ptable.proc[idx]);
   release(&ptable.lock);
 }
 
@@ -858,7 +862,7 @@ void
 addtick(int idx, int num) 
 {
   acquire(&ptable.lock);
-  ptable.proc[idx].mainth->ticks += num;
+  ptable.proc[idx].ticks += num;
   release(&ptable.lock);
 }
 
@@ -1342,7 +1346,10 @@ thread_pick(int idx)
 {
   struct proc *p;
   struct proc *mainth = &ptable.proc[idx];
-  struct proc *recentth = mainth->recentth;
+  struct proc *recentth = mainth->recentth;  
+
+  if(mainth->runblenum == 0 || recentth == 0)
+    return -1;
 
   for(p = recentth->nextth; p != recentth; p = p->nextth) {
     if(p->state == RUNNABLE) {

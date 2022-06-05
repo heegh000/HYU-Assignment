@@ -9,6 +9,9 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct wqueue;
+typedef struct x xem_t;
+typedef struct rw rwlock_t;
 
 // bio.c
 void            binit(void);
@@ -137,6 +140,7 @@ void            thread_sleep(void*, struct spinlock*);
 int             thread_pick(int);
 void            clear_thread(int);
 void            prepare_exec(int);
+void            xem_wakeup(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -224,7 +228,22 @@ int             getidxheap(void);
 int             getpvheap(void);
 void            showheap(void);
 
-// pick a process to run
+//xem.c
+int             wq_init(struct wqueue*);
+int             wq_isempty(struct wqueue*);
+int             wq_isfull(struct wqueue*);
+int             wq_enqueue(int, struct wqueue*);
+int             wq_dequeue(struct wqueue*);
+void            wq_showqueue(struct wqueue*);
+int             xem_init(xem_t*);
+int             xem_wait(xem_t*);
+int             xem_unlock(xem_t*);
+int             rwlock_init(rwlock_t*);
+int             rwlock_acquire_readlock(rwlock_t*);
+int             rwlock_acquire_writelock(rwlock_t*);
+int             rwlock_release_readlock(rwlock_t*);
+int             rwlock_release_writelock(rwlock_t*);
+
 
 // return index of process on success or -1 on failure
 // number of elements in fixed-size array
