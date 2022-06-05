@@ -28,7 +28,7 @@ main(int argc, char *argv[])
   rwlock_init(&rwlock);
 
   /* TEST for checking lock acquisition order */
-  test1();
+  //test1();
 
   /* TEST for efficiency of performance of RW lock */
   test2();

@@ -116,11 +116,12 @@ xem_init(xem_t *semaphore)
 int
 xem_wait(xem_t *semaphore) 
 {
+  struct proc* cur = myproc();
   acquire(&semaphore->lk);
   semaphore->count--;
   if(semaphore->count < 0) {
-    wq_enqueue(myproc()->idx, &semaphore->waiting);
-    sleep(myproc(), &semaphore->lk);
+    wq_enqueue(cur->idx, &semaphore->waiting);
+    sleep(cur, &semaphore->lk);
   } 
   release(&semaphore->lk);
   return 0;
@@ -147,7 +148,6 @@ rwlock_init(rwlock_t *rwlock)
   xem_init(&rwlock->readlock);
   xem_init(&rwlock->writelock);
   xem_init(&rwlock->sharelock);
-  //wq_init(&rwlock->waiting);
   rwlock->reader = 0;
   return 0;
 }
@@ -158,7 +158,7 @@ rwlock_acquire_readlock(rwlock_t *rwlock)
   xem_wait(&rwlock->writelock);
   xem_wait(&rwlock->readlock);
   
-  rwlock->reader ++;
+  rwlock->reader++;
   if(rwlock->reader == 1)
     xem_wait(&rwlock->sharelock);
 
