@@ -80,25 +80,45 @@ def onKeyPress( window, key, scancode, action, mods):
         return ; # do nothing
     # If 'c' or space bar are pressed, alter the camera.
     # If a number is pressed, alter the camera corresponding the number.
+    
     if key==glfw.KEY_C or key==glfw.KEY_SPACE:
-        print( "Toggle camera %s\n"% cameraIndex );
         cameraIndex += 1;
-
-    if cameraIndex >= len(wld2cam):
+        if cameraIndex >= len(wld2cam):
+            cameraIndex = 0;
+        print( "Toggle camera %s\n"% cameraIndex );
+    elif key==glfw.KEY_0:
         cameraIndex = 0;
-        
+        print( "Toggle camera %s\n"% cameraIndex );
+    elif key==glfw.KEY_1:
+        cameraIndex = 1;
+        print( "Toggle camera %s\n"% cameraIndex );
+    elif key==glfw.KEY_2:
+        cameraIndex = 2;
+        print( "Toggle camera %s\n"% cameraIndex );
+    elif key==glfw.KEY_3:
+        cameraIndex = 3;
+        print( "Toggle camera %s\n"% cameraIndex );
+    elif key==glfw.KEY_4:
+        cameraIndex = 4;
+        print( "Toggle camera %s\n"% cameraIndex );
+
+
+
+    
 #*****************************************************
-# Varaible I added
-cow2wld_arr = []
-cow_pos_catmullrom = []
-coeff_arr = np.zeros((6, 4, 3))
+# Varaible I made
 
 first_click = True
 clicked_pos = []
 
+start_cow2wld = []
+cow2wld_arr = []
+coeff_arr = np.zeros((6, 4, 3))
+
 start_time = 0
 animate_count = 0
-
+prev_coeff_idx = 0
+curr_pos = 0
 
 hermite_matrix = np.array( [[2., -2., 1., 1.],
                             [-3., 3., -2., -1.],
@@ -110,13 +130,14 @@ catmullrom_matrix = np.array( [ [0., 1., 0., 0.],
                               [-0.5, 0., 0.5, 0.],
                               [0., -0.5, 0., 0.5]])
 
-prev_coeff_idx = 0
-start_cow2wld = []
-curr_pos = 0
-
-# Function I added
-def cal_catmullrom(q0, q1, q2, q3):
+# Function I made
+def cal_catmullrom(cow2wld0, cow2wld1, cow2wld2, cow2wld3):
     global hermite_matirx, catmullrom_matrix
+
+    q0 = getTranslation(cow2wld0)
+    q1 = getTranslation(cow2wld1)
+    q2 = getTranslation(cow2wld2)
+    q3 = getTranslation(cow2wld3)
 
     points = [ vector3(q0[0], q0[1], q0[2]),
                vector3(q1[0], q1[1], q1[2]),
@@ -145,20 +166,18 @@ def transformation (curr_pos, next_pos):
     global start_cow2wld
 
     copy_cow2wld = start_cow2wld.copy()
-    local_origin_pos =  getTranslation(start_cow2wld)
     
     cow_x_axis = vector3(start_cow2wld[0][0], start_cow2wld[1][0], start_cow2wld[2][0])
     cow_y_axis = vector3(start_cow2wld[0][1], start_cow2wld[1][1], start_cow2wld[2][1])
-    cow_z_axis = vector3(start_cow2wld[0][2], start_cow2wld[1][2], start_cow2wld[2][2])
 
     next_vec = next_pos - curr_pos
     next_vec_xz = vector3(next_vec[0], 0, next_vec[2])
 
-    theta_z = np.arccos( np.dot(cow_y_axis, next_vec) / ( np.linalg.norm(cow_y_axis) * np.linalg.norm(next_vec)))
-    theta_y = np.arccos( np.dot(cow_x_axis, next_vec_xz) / ( np.linalg.norm(cow_x_axis) * np.linalg.norm(next_vec_xz)))
+    theta_z = math.acos( np.dot(cow_y_axis, next_vec) / ( np.linalg.norm(cow_y_axis) * np.linalg.norm(next_vec)))
+    theta_y = math.acos( np.dot(cow_x_axis, next_vec_xz) / ( np.linalg.norm(cow_x_axis) * np.linalg.norm(next_vec_xz)))
 
-    crv_y = np.cross(cow_x_axis, next_vec_xz)
-    if crv_y[1] < 0:
+    cross = np.cross(cow_x_axis, next_vec_xz)
+    if cross[1] < 0:
         theta_y = 2 * np.pi - theta_y
 
     theta_z = np.pi / 2 - theta_z
@@ -174,18 +193,17 @@ def transformation (curr_pos, next_pos):
                      [0, 0, 0, 1]])
 
     T = np.eye(4)
-    setTranslation(T,  curr_pos - local_origin_pos)
+    setTranslation(T,  curr_pos - getTranslation(start_cow2wld))
 
     ret_cow2wld = T @ copy_cow2wld @ R_y @ R_z
  
     return ret_cow2wld
 
 def clean_up():
-    global animate_count, cow2wld_arr, cow_pos_catmullrom, isDrag, first_click, cow2wld, pickInfo, curr_pos, start_cow2wld
+    global animate_count, cow2wld_arr, isDrag, first_click, cow2wld, pickInfo, curr_pos, start_cow2wld
     
     animate_count = 0
     cow2wld_arr.clear()
-    cow_pos_catmullrom.clear()
     isDrag = 0
     first_click = True
 
@@ -194,8 +212,6 @@ def clean_up():
     pickInfo.cowPickPosition = curr_pos
     pickInfo.cowPickConfiguration = cow2wld
     pickInfo.cowPickPositionLocal = transform(np.linalg.inv(cow2wld),curr_pos)
-    
-    
 #*****************************************************
 
 
@@ -483,12 +499,10 @@ def onMouseButton(window,button, state, mods):
             
             if not first_click and cursorOnCowBoundingBox:
                 cow2wld_arr.append(cow2wld)
-                cow_pos_catmullrom.append(getTranslation(cow2wld))
                 print(getTranslation(cow2wld))
-                
                 if len(cow2wld_arr) == 6:
                     for count in range(0, 6) :
-                        coeff_arr[count] = cal_catmullrom( cow_pos_catmullrom[(5 + count) % 6], cow_pos_catmullrom[(0 + count) % 6], cow_pos_catmullrom[(1 + count) % 6], cow_pos_catmullrom[(2 + count) % 6])
+                        coeff_arr[count] = cal_catmullrom( cow2wld_arr[(5 + count) % 6], cow2wld_arr[(0 + count) % 6], cow2wld_arr[(1 + count) % 6], cow2wld_arr[(2 + count) % 6])
                     start_time = glfw.get_time()
                     animate_count = 0
                     curr_pos = getTranslation(start_cow2wld)    
