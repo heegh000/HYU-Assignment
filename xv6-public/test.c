@@ -1,162 +1,113 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#include "fcntl.h"
 
-xem_t sem;
+#define N 100
+#define SIZE 1024
+#define FSIZE 16 * 1024 * 1024
+struct test {
+    char file[SIZE];
+};
+char buf[512];
 
-void *
-test_without_sem(void *arg)
+void
+save(char* filename)
 {
-  int id = (int)arg;
-  for(int i = 0; i < 10; ++i)
-    printf(1, "%d", id);
-  thread_exit(0);
-  return 0;
+    int fd;
+    struct test t;
+    for (int i = 0; i < SIZE; i++) t.file[i] = '1';
+    fd = open(filename, O_CREATE | O_RDWR);
+    if(fd >= 0) {
+        printf(1, "Create Success\n");
+    } else {
+        printf(1, "Error: Create failed\n");
+        exit();
+    }
+
+    int size = sizeof(t);
+    printf(1, "[%d]", size);
+    for (int i = 0; i < 1024; i++){
+            for (int j = 0; j < 16; j++){
+            if(write(fd, &t, size) != size){
+                printf(1, "Error: Write failed\n");
+                exit();
+            }
+        }
+    }
+    printf(1, "write ok\n");
+    close(fd);
 }
 
-void *
-test_with_sem(void *arg)
+void
+load(char* filename)
 {
-  int id = (int)arg;
-  xem_wait(&sem);
-  for(int i = 0; i < 10; ++i)
-    printf(1, "%d", id);
-  xem_unlock(&sem);
-  thread_exit(0);
-  return 0;
+    int fd;
+    struct test t;
+    fd = open(filename, O_RDONLY);
+    if(fd >= 0) {
+        printf(1, "Open Success\n");
+    } else {
+        printf(1, "Error: open failed\n");
+        exit();
+    }
+
+    int size = sizeof(t);
+    if(read(fd, &t, size) != size){
+        printf(1, "Error: read failed\n");
+        exit();
+    }
+    printf(1, "Read Success\n");
+    close(fd);
+}
+void
+printFile(int fd, char *name, int line)
+{
+    int i, n; //here the size of the read chunk is defined by n, and i is used to keep a track of the chunk index
+    int l, c; // here line number is defined by l, and the character count in the string is defined by c
+
+    l = c = 0;
+
+  while((n = read(fd, buf, sizeof(buf))) > 0 )
+  {
+    for(i=0;i<=n ;i++)
+    {            
+        //print the characters in the line 
+        if(buf[i]!='\n'){         
+            printf(1,"%c",buf[i]);
+        }   
+        //if the number of lines is equal to l, then exit
+        else if (l == (line-1)){
+        printf(1,"\n");   
+        exit();
+        }
+        //if the number of lines is not equal to l, then jump to next line and increment the value of l 
+        else{
+            printf(1,"\n");
+            l++;
+        } 
+    }
+  }
+
+  if(n < 0){
+    printf(1, "printFile: read error\n");
+    exit();
+  }
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
-  void *ret;
-  const int N = 10;
-  thread_t t[N];
-
-  printf(1, "1. Test without any synchronization\n");
-  for(int i = 0; i < N; ++i) {
-    if(thread_create(&t[i], test_without_sem, (void*)(i)) < 0) {
-      printf(1, "panic at thread create\n");
-      exit();
+    //exit();
+    char filename[5] = "test";
+    char n = '0';
+    for (int i = 0; i < 4; i++){
+    n = i + '0';
+    filename[4] = n;
+    save(filename);
+    //printFile(fd, filename, 10);
+    load(filename);
+    if (unlink(filename)<0) printf(1, "unlink fail");
     }
-  }
-  for(int i = 0; i < N; ++i) {
-    if(thread_join(t[i], &ret) < 0) {
-      printf(1, "panic at thread join\n");
-      exit();
-    }
-  }
-  printf(1, "\nIts sequence could be mixed\n");
-
-  printf(1, "2. Test with synchronization of a binary semaphore\n");
-  xem_init(&sem);
-  xem_wait(&sem);
-  for(int i = 0; i < N; ++i) {
-    if(thread_create(&t[i], test_with_sem, (void*)(i)) < 0) {
-      printf(1, "panic at thread create\n");
-      exit();
-    }
-  }
-  xem_unlock(&sem);
-  for(int i = 0; i < N; ++i) {
-    if(thread_join(t[i], &ret) < 0) {
-      printf(1, "panic at thread join\n");
-      exit();
-    }
-  }
-  printf(1, "\nIts sequence must be sorted\n");
-
-  printf(1, "3. Test with synchronization of a semaphore with 3 users\n");
-  xem_init(&sem);
-  sem.count = 3;
-  xem_wait(&sem);
-  for(int i = 0; i < N; ++i) {
-    if(thread_create(&t[i], test_with_sem, (void*)(i)) < 0) {
-      printf(1, "panic at thread create\n");
-      exit();
-    }
-  }
-  xem_unlock(&sem);
-  for(int i = 0; i < N; ++i) {
-    if(thread_join(t[i], &ret) < 0) {
-      printf(1, "panic at thread join\n");
-      exit();
-    }
-  }
-  printf(1, "\nIts sequence could be messy\n");
-  exit();
-} 
-/*
-#include "types.h"
-#include "stat.h"
-#include "user.h"
-
-void*
-func2 (void* arg)
-{
-  int ret = (int) arg;
-  printf(1, "Hello, Im func2 ddr: %d, arg: %d\n", &ret, ret);  
-  thread_exit((void*)ret);  
-  return 0;
+    exit();
 }
-
-void* 
-func(void* arg) 
-{
-
-  int ret = (int) arg;
-//  thread_t th;
-//  void* retval;
- char* temp;
-  int addr;
-  sleep(10);
-  printf(1, "Hello Im func addr: %d\n", &addr);
-  sleep(5);
-  temp = malloc(3000 * 2);
-  printf(1, "thread%d malloc %d\n", ret,temp);
-//  thread_create(&th, func2, (void*) 30000);
-  
-//  thread_join(th, &retval);
-  
-//  ret = (int)retval + (int)arg;
-//  printf(1, "func: arg: %d, retval: %d\n", ret, retval);  
-  
-  thread_exit((void*)ret);
-  return 0;
-}
-
-
-int
-main(int argc, char *argv[]) 
-{
-  thread_t th[3];
-  void* retval[3];
-  int addr;
-  char* temp;
-  printf(1, "HELLO, Im main addr: %d\n", &addr);
-
-  thread_create(&th[0], func, (void*) 0);
-  thread_join(th[0], &retval[0]);
-  
-  temp = malloc(3000 * 2);
-  printf(1, "main0 malloc %d\n", temp);
-
-
-  thread_create(&th[0], func, (void*) 0);
-  thread_create(&th[1], func, (void*) 1);
-  thread_join(th[0], &retval[0]);
-  thread_join(th[1], &retval[1]);
-  temp = malloc(3000 * 2);
-  printf(1, "main1 malloc %d\n", temp);
-
-  thread_create(&th[0], func, (void*) 0);
-  thread_create(&th[1], func, (void*) 1);
-  thread_create(&th[2], func, (void*) 2);
-  thread_join(th[0], &retval[0]);
-  thread_join(th[1], &retval[1]);
-  thread_join(th[2], &retval[2]);
-  temp = malloc(3000 * 2);
-  printf(1, "main2 malloc %d\n", temp);
-  exit();
-}
-*/

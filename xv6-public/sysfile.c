@@ -442,3 +442,31 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+int 
+sys_pread(void)
+{
+  struct file *f;
+  int n;
+  char *p;
+  int off;
+
+  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argint(3, &off) || argptr(1, &p, n) < 0)
+    return -1;
+  return filepread(f, p, n, off);
+
+}
+
+int
+sys_pwrite(void)
+{
+  struct file *f;
+  int n;
+  char *p;
+  int off;
+
+  if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argint(3, &off) || argptr(1, &p, n) < 0)
+    return -1;
+  return filepwrite(f, p, n, off);
+
+}

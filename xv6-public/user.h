@@ -4,6 +4,7 @@
 
 struct stat;
 struct rtcdate;
+typedef struct thread_sg thread_safe_guard;
 
 // system calls
 int fork(void);
@@ -43,6 +44,8 @@ int rwlock_acquire_readlock(rwlock_t*);
 int rwlock_acquire_writelock(rwlock_t*);
 int rwlock_release_readlock(rwlock_t*);
 int rwlock_release_writelock(rwlock_t*);
+int pread(int, char*, int, int);
+int pwrite(int, char*, int, int);
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -57,3 +60,8 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+thread_safe_guard* thread_safe_guard_init(int);
+int thread_safe_pread(thread_safe_guard*, void*, int, int);
+int thread_safe_prwrite(thread_safe_guard*, void*, int, int);
+void thread_safe_guard_destory(thread_safe_guard*);
