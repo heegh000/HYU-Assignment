@@ -198,7 +198,7 @@ filepwrite(struct file *f, void* addr, int n, int off) {
 
       begin_op();
       ilock(f->ip);
-      if((r = writei(f->ip, addr + i, cur_off, n1)) > 0)
+      if((r = writei_p(f->ip, addr + i, cur_off, n1)) > 0)
         cur_off += r;
       iunlock(f->ip);
       end_op();
