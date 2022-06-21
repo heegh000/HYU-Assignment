@@ -374,9 +374,9 @@ bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
   struct buf *bp;
-  uint p_db_idx;
-  uint p_in_idx;
-  uint p_data_idx; 
+  uint triple_to_double;
+  uint double_to_single;
+  uint single_to_data; 
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
@@ -407,13 +407,14 @@ bmap(struct inode *ip, uint bn)
     if((addr = ip->addrs[NDIRECT + 1]) == 0)
       ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
     
+    double_to_single = bn / NINDIRECT;
+    single_to_data = bn % NINDIRECT;    
+
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
     
-    p_in_idx = bn / NINDIRECT;
-    
-    if((addr = a[p_in_idx]) == 0) {
-      a[p_in_idx] = addr = balloc(ip->dev);
+    if((addr = a[double_to_single]) == 0) {
+      a[double_to_single] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
@@ -421,9 +422,8 @@ bmap(struct inode *ip, uint bn)
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
 
-    p_data_idx = bn % NINDIRECT;
-    if((addr = a[p_data_idx]) == 0) {
-      a[p_data_idx] = addr = balloc(ip->dev);
+    if((addr = a[single_to_data]) == 0) {
+      a[single_to_data] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
@@ -438,36 +438,30 @@ bmap(struct inode *ip, uint bn)
     if((addr = ip->addrs[NDIRECT + 2]) == 0)
       ip->addrs[NDIRECT + 2] = addr = balloc(ip->dev);
     
+    triple_to_double = bn / NDINDIRECT;
+    double_to_single = (bn % NDINDIRECT) / NINDIRECT;
+    single_to_data = (bn % NDINDIRECT) % NINDIRECT;   
+ 
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
-
-    p_db_idx = bn / NDINDIRECT;
-    
-    if((addr = a[p_db_idx]) == 0) {
-      a[p_db_idx] = addr = balloc(ip->dev);
+    if((addr = a[triple_to_double]) == 0) {
+      a[triple_to_double] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
 
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
-
-    p_in_idx = bn % NDINDIRECT;
-    p_in_idx = p_in_idx / NINDIRECT;
-
-    if((addr = a[p_in_idx]) == 0) {
-      a[p_in_idx] = addr = balloc(ip->dev);
+    if((addr = a[double_to_single]) == 0) {
+      a[double_to_single] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);
 
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
-
-    p_data_idx = p_in_idx % NINDIRECT;
-
-    if((addr = a[p_data_idx]) == 0) {
-      a[p_data_idx] = addr = balloc(ip->dev);
+    if((addr = a[single_to_data]) == 0) {
+      a[single_to_data] = addr = balloc(ip->dev);
       log_write(bp);
     }
     brelse(bp);

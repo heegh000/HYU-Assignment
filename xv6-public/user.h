@@ -4,7 +4,7 @@
 
 struct stat;
 struct rtcdate;
-typedef struct thread_sg thread_safe_guard;
+typedef struct thsg thread_safe_guard;
 
 // system calls
 int fork(void);
@@ -61,6 +61,7 @@ void* malloc(uint);
 void free(void*);
 int atoi(const char*);
 
+// saferw.c
 thread_safe_guard* thread_safe_guard_init(int);
 int thread_safe_pread(thread_safe_guard*, void*, int, int);
 int thread_safe_prwrite(thread_safe_guard*, void*, int, int);

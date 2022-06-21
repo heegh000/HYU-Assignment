@@ -3,18 +3,18 @@
 #include "user.h"
 #include "param.h"
 
-typedef struct thread_sg {
+
+typedef struct thsg {
   rwlock_t rw;
   int fd;   
 } thread_safe_guard;
 
-
 thread_safe_guard* 
 thread_safe_guard_init(int fd) {
-  thread_safe_guard* tsg = (thread_safe_guard*)malloc(sizeof(thread_safe_guard));
-  rwlock_init(&tsg->rw);
-  tsg->fd = fd;
-  return tsg;
+  thread_safe_guard* thsg = (thread_safe_guard*)malloc(sizeof(thread_safe_guard));
+  rwlock_init(&thsg->rw);
+  thsg->fd = fd;
+  return thsg;
 }
 
 int  
@@ -49,4 +49,4 @@ int thread_safe_pwrite(thread_safe_guard* file_guard, void* addr, int n, int off
 void
 thread_safe_guard_destroy(thread_safe_guard* file_guard) {
   free(file_guard);
-} 
+}
