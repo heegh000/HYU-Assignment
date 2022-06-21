@@ -64,5 +64,5 @@ int atoi(const char*);
 // saferw.c
 thread_safe_guard* thread_safe_guard_init(int);
 int thread_safe_pread(thread_safe_guard*, void*, int, int);
-int thread_safe_prwrite(thread_safe_guard*, void*, int, int);
-void thread_safe_guard_destory(thread_safe_guard*);
+int thread_safe_pwrite(thread_safe_guard*, void*, int, int);
+void thread_safe_guard_destroy(thread_safe_guard*);
