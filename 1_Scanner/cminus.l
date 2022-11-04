@@ -30,6 +30,7 @@ whitespace  [ \t]+
 "void"          {return VOID;}
 "="             {return ASSIGN;}
 "=="            {return EQ;}
+"!="            {return NE;}
 "<"             {return LT;}
 "<="            {return LE;}
 ">"             {return GT;}
