@@ -1,10 +1,5 @@
-a > b
-c >= d
-e < f
-g <= h
-i = j
-l == m
-o != p
-a + b, c - d, e * f, g / h;
-{a}, b123[456], (c)
-int void if else else3 while return;
+/*
+
+
+
+*
