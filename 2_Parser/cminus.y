@@ -37,7 +37,9 @@ static int yylex(void); // added 11/2/11 to ensure no conflict with lex
 // Rule1
 program     : decl_list
                 { 
-                    savedTree = $1;
+                    if(!Error) {
+                        savedTree = $1;
+                    }
                 }
             | error
                 {
