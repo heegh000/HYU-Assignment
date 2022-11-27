@@ -1,15 +1,44 @@
-int main (void){ 
-    int a;
-    int b;
-    int c;
-    c = a + b;
-    return c*1;
+int globalVar1;
+
+int testFunc1 (void){ 
+    int localVar1;
+    int localVar2;
+    int localVar3[2];
+
+    localVar1 = localVar1 + localVar3[0];
+    localVar3[1] = localVar1 / localVar2 - localVar1*localVar3[1];
+
+    if(localVar1 <= localVar2)
+        localVar1 = localVar2 = localVar1 + (localVar2 - localVar1) * localVar3[1];
+
+    if(localVar1 < localVar2)
+        localVar1 = localVar2;
+
+    if(localVar1 > localVar2)
+        localVar1 = localVar2;
+
+    if(localVar1 >= localVar2)
+        localVar1 = localVar2;
+
+    if(localVar1 == localVar2)
+        localVar1;
+    else {
+        int localVar4;
+        int localVar5[3];
+        testFunc2(localVar1+localVar4, localVar3, localVar4, localVar5);
+    }
+
+    while (localVar1 != localVar2) { ; }
+
+    return localVar3[localVar1];
 }
 
-int main (void){ 
-    int a;
-    int b;
-    int c;
-    c = a + b;
-    return c*1;
+int globalVar2[3];
+
+void testFunc2 (int param1, int param2[], void param3, void param4[]) {
+    return;
+}
+
+int main(void) {
+    testFunc1();
 }

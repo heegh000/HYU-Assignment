@@ -89,7 +89,7 @@ var_decl    : type_spec identifier SEMI
                     free($2);
                     $$->kind.decl = VarK;
                 }
-            | type_spec identifier LBRACE const_val RBRACE
+            | type_spec identifier LBRACE const_val RBRACE SEMI
                 {
                     $$ = $1;
                     $$->attr.name = copyString($2->attr.name);
