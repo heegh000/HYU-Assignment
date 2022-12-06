@@ -65,12 +65,47 @@ extern int lineno; /* source line number for listing */
 typedef enum {DeclK,StmtK,ExpK} NodeKind;
 typedef enum {VarK,FuncK,ParamK,ParamVoidK} DeclKind;
 typedef enum {CompK,IfK,IfElseK,WhileK,ReturnK,ReturnNonK} StmtKind;
-typedef enum {AssignK,IdK,OpK,ConstK,CallK} ExpKind;
+typedef enum {AssignK,IdK,VarAccessK,OpK,ConstK,CallK} ExpKind;
 
 /* ExpType is used for type checking */
 typedef enum {Integer,Void,IntegerArr,VoidArr} ExpType;
 
 #define MAXCHILDREN 3
+
+// typedef struct LineNode_ LineNode;
+// typedef struct SymRec_ SymRec;
+// typedef struct SymTable_ SymTable;
+
+// struct LineNode_{ 
+//   int lineno;
+//   struct LineNode_* next;
+
+// };
+
+// struct SymRec_{ 
+//   char * name;
+//   ExpType type;
+//   int loc;
+//   SymTable* scope; 
+//   LineNode* lines;
+
+//   int paramNum;
+//   SymTable* funcScope; 
+
+//   SymRec* next;
+
+// };
+
+// struct SymTable_{  
+//   char* name;
+//   int loc;
+//   SymRec* head;
+//   SymTable* parent;
+//   SymTable* next; // for using when printing
+
+// };
+
+typedef struct SymTable_ SymTable;
 
 typedef struct treeNode
    { struct treeNode * child[MAXCHILDREN];
@@ -82,6 +117,7 @@ typedef struct treeNode
              int val;
              char * name; } attr;
      ExpType type; /* for type checking of exps */
+     SymTable* curTop;
    } TreeNode;
 
 /**************************************************/

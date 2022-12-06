@@ -26,8 +26,12 @@ struct SymRec_{
   char * name;
   ExpType type;
   int loc;
-  SymTable* scope;
+  SymTable* scope; 
   LineNode* lines;
+
+  int paramNum;
+  SymTable* funcScope; 
+
   SymRec* next;
 
 };
@@ -48,13 +52,13 @@ SymTable* st_build(SymTable*, char*);
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
-void st_insert(SymTable*, char*, ExpType, int);
+void st_insert(SymTable*, TreeNode*, int, SymTable*);
 /* Function st_lookup returns the memory 
  * location of a variable or -1 if not found
  */
-int st_lookup_cur_table(SymTable*, char *);
-SymTable* st_lookup(SymTable*, char *);
-
+int st_lookup_cur_table(SymTable*, char *, int);
+SymRec* st_lookup(SymTable*, char *, int);
+  
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
  * to the listing file

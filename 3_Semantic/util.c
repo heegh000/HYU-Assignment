@@ -74,7 +74,6 @@ TreeNode * newDeclNode()
     t->nodekind = DeclK;
     // t->kind.stmt = kind;
     t->lineno = lineno;
-    // t->type = type;
   }
   return t;
 }
@@ -229,6 +228,7 @@ void printTree( TreeNode * tree )
           fprintf(listing,"Assign:\n");
           break;
         case IdK:
+        case VarAccessK:
           fprintf(listing,"Variable: name = %s\n",tree->attr.name);
           break;
         case OpK:

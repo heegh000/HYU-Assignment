@@ -308,7 +308,7 @@ iter_stmt   : WHILE LPAREN exp RPAREN stmt
 return_stmt : RETURN SEMI
                 {
                     $$ = newStmtNode(ReturnNonK);
-                    // $$->type = VOID;
+                    // $$->type = Void;
                 }
             | RETURN exp SEMI
                 {
@@ -335,10 +335,12 @@ exp         : var ASSIGN exp
 var         : identifier
                 {
                     $$ = $1;
+                    $$->kind.exp = VarAccessK;
                 }
             | identifier LBRACE exp RBRACE
                 {
                     $$ = $1;
+                    $$->kind.exp = VarAccessK;
                     $$->child[0] = $3;
                 }
             ;
@@ -464,7 +466,6 @@ factor      : LPAREN exp RPAREN
 call        : identifier LPAREN args RPAREN
                 {
                     $$ = $1;
-                    $$->attr.name = copyString($1->attr.name);
                     $$->kind.exp = CallK;
                     $$->child[0] = $3;
                 }
@@ -517,7 +518,7 @@ const_val   : NUM
                 {
                     $$ = newExpNode(ConstK);
                     $$->attr.val = atoi(tokenString);
-                    $$->type = INT;
+                    $$->type = Integer;
                 }
             ;
 %%
