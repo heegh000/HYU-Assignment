@@ -100,9 +100,6 @@ var_decl    : type_spec identifier SEMI
                     if($$->type == Integer) {
                         $$->type = IntegerArr;
                     }
-                    else {
-                        $$->type = VoidArr;
-                    }
                 }
             ;
 
@@ -185,10 +182,6 @@ param       : type_spec identifier
                     if($$->type == Integer) {
                         $$->type = IntegerArr;
                     }
-                    else {
-                        $$->type = VoidArr;
-                    }
-
                 }
             ;
 

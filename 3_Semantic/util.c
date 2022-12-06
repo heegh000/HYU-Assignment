@@ -157,9 +157,6 @@ void printType(ExpType type) {
     case IntegerArr:
       fprintf(listing,"int[]\n");
       break;
-    case VoidArr:
-      fprintf(listing,"void[]\n"); 
-      break;
     default:
       fprintf(listing,"Unknown ExpType\n");
       break;

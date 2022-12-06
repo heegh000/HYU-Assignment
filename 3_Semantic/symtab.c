@@ -174,9 +174,12 @@ void printSymTab(FILE* listing) {
             fprintf(listing,"%4d ", lineNode->lineno);
             lineNode = lineNode->next;
         }
-        fprintf(listing,"\n\n");
+        fprintf(listing,"\n");
         rec = rec->next;
       }
+      
+      fprintf(listing,"\n\n");
+
       tab = tab->next;
     }
 

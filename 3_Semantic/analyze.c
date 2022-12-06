@@ -110,7 +110,6 @@ static void insertNode( TreeNode * t) {
       switch (t->kind.decl) {
         case VarK:
           if(st_lookup_cur_table(topSymStack(), t->attr.name, -1) == -1) {
-            printf("%s %d\n", t->attr.name, t->type);
             st_insert(topSymStack(), t, -1, NULL);
           }
           else {
@@ -152,19 +151,21 @@ static void insertNode( TreeNode * t) {
         default:
           break;
       }
+
+      break;
+
     case StmtK:
       switch (t->kind.stmt) { 
         case CompK:
+          printf("ASDSADASDAS, %d\n", alreadyCreated);
           if(!alreadyCreated)  {
-            alreadyCreated = 0;
-            SymTable* newSymTab = st_build(topSymStack(), t->attr.name);
+            SymTable* newSymTab = st_build(topSymStack(), NULL);
             pushSymStack(newSymTab);
           }
+          alreadyCreated = 0;
           break;
         case IfK:
-          break;
         case IfElseK:
-          break;
         case WhileK:
           break;
         case ReturnK:
@@ -178,7 +179,9 @@ static void insertNode( TreeNode * t) {
         default:
           break;
       }
+
       break;
+
     case ExpK:
       switch (t->kind.exp) { 
         case VarAccessK: ;
@@ -188,6 +191,7 @@ static void insertNode( TreeNode * t) {
             st_insert(rec->scope, t, -1, NULL);
           }
           break;
+      
         case CallK: ;
           rec = st_lookup(topSymStack(), t->attr.name, 0);
           t->curTop = topSymStack();
@@ -204,7 +208,9 @@ static void insertNode( TreeNode * t) {
         default:
           break;
       }
+      
       break;
+
     default:
       break;
   }
@@ -344,7 +350,9 @@ static void checkNode(TreeNode * t) {
         default:
           break;
       }
+
       break;
+   
     case StmtK:
       switch (t->kind.stmt) { 
         case CompK:
@@ -372,13 +380,16 @@ static void checkNode(TreeNode * t) {
         default:
           break;
       }
+      
       break;
+
     case ExpK:
       switch (t->kind.exp) { 
         case VarAccessK: ;
           rec = st_lookup(t->curTop, t->attr.name, -1);
           if(rec == NULL) {
             printError(t, 1);
+            t->type = Undefined;
           }
           else {
             if(t->child[0] == NULL) { 
@@ -387,9 +398,12 @@ static void checkNode(TreeNode * t) {
             else {
               if(rec->type != IntegerArr) {
                 printError(t, 4);
+                t->type = Integer; //
               }
               else if(t->child[0]->type != Integer) {
                   printError(t,3);
+                  t->type = Integer; //
+
               }
               else {
                 t->type = Integer;
@@ -401,6 +415,7 @@ static void checkNode(TreeNode * t) {
           rec = st_lookup(t->curTop, t->attr.name, 0);
           if(rec == NULL) {
             printError(t, 0);
+            t->type = Undefined; //
           }
           else {
             TreeNode* arg = t->child[0];
@@ -411,6 +426,7 @@ static void checkNode(TreeNode * t) {
               }
               else {
                 printError(t, 5);
+                t->type = rec->type; //
               }
             }
 
@@ -424,6 +440,7 @@ static void checkNode(TreeNode * t) {
 
               if(argsNum != rec->paramNum) {
                 printError(t, 5);
+                t->type = rec->type; //
               }
               else {
                 int isMatched = 1;
@@ -438,6 +455,7 @@ static void checkNode(TreeNode * t) {
                 }
                 if(!isMatched) {
                   printError(t, 5);
+                  t->type = rec->type; //
                 }
                 else {
                   t->type = rec->type;
@@ -470,7 +488,9 @@ static void checkNode(TreeNode * t) {
         default:
           break;
       }
+
       break;
+    
     default:
       break;
   }
