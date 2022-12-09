@@ -43,7 +43,7 @@ SymTable* popSymStack() {
   return NULL;
 }
 
-SymTable* topSymStack() {
+SymTable* peekSymStack() {
   if(symStack == NULL) {
     return NULL;
   }
@@ -109,19 +109,19 @@ static void insertNode( TreeNode * t) {
     case DeclK:
       switch (t->kind.decl) {
         case VarK:
-          if(st_lookup_cur_table(topSymStack(), t->attr.name, -1) == -1) {
-            st_insert(topSymStack(), t, -1, NULL);
+          if(st_lookup_cur_table(peekSymStack(), t->attr.name, -1) == -1) {
+            st_insert(peekSymStack(), t, -1, NULL);
           }
           else {
             //Error?
           }
           break;
         case FuncK:
-          if(st_lookup_cur_table(topSymStack(), t->attr.name, 0) == -1) {
+          if(st_lookup_cur_table(peekSymStack(), t->attr.name, 0) == -1) {
             alreadyCreated = 1;
             funcName = t->attr.name;
 
-            SymTable* newSymTab = st_build(topSymStack(), t->attr.name);
+            SymTable* newSymTab = st_build(peekSymStack(), t->attr.name);
             
             TreeNode* param = t->child[0]; 
             int paramNum = 0;
@@ -131,7 +131,7 @@ static void insertNode( TreeNode * t) {
               param = param->sibling;
             }
 
-            st_insert(topSymStack(), t, paramNum, newSymTab);
+            st_insert(peekSymStack(), t, paramNum, newSymTab);
             pushSymStack(newSymTab);
           }
           else {
@@ -139,8 +139,8 @@ static void insertNode( TreeNode * t) {
           }
           break;
         case ParamK:
-          if(st_lookup_cur_table(topSymStack(), t->attr.name, -1) == -1) {
-            st_insert(topSymStack(), t, -1, NULL);
+          if(st_lookup_cur_table(peekSymStack(), t->attr.name, -1) == -1) {
+            st_insert(peekSymStack(), t, -1, NULL);
           }
           else {
             //Error?
@@ -159,7 +159,7 @@ static void insertNode( TreeNode * t) {
         case CompK:
           printf("ASDSADASDAS, %d\n", alreadyCreated);
           if(!alreadyCreated)  {
-            SymTable* newSymTab = st_build(topSymStack(), NULL);
+            SymTable* newSymTab = st_build(peekSymStack(), NULL);
             pushSymStack(newSymTab);
           }
           alreadyCreated = 0;
@@ -170,11 +170,11 @@ static void insertNode( TreeNode * t) {
           break;
         case ReturnK:
           t->attr.name = funcName;
-          t->curTop = topSymStack();
+          t->curTop = peekSymStack();
           break;
         case ReturnNonK:
           t->attr.name = funcName;
-          t->curTop = topSymStack();
+          t->curTop = peekSymStack();
           break;
         default:
           break;
@@ -185,16 +185,16 @@ static void insertNode( TreeNode * t) {
     case ExpK:
       switch (t->kind.exp) { 
         case VarAccessK: ;
-          rec = st_lookup(topSymStack(), t->attr.name, -1);
-          t->curTop = topSymStack();
+          rec = st_lookup(peekSymStack(), t->attr.name, -1);
+          t->curTop = peekSymStack();
           if(rec != NULL) {
             st_insert(rec->scope, t, -1, NULL);
           }
           break;
       
         case CallK: ;
-          rec = st_lookup(topSymStack(), t->attr.name, 0);
-          t->curTop = topSymStack();
+          rec = st_lookup(peekSymStack(), t->attr.name, 0);
+          t->curTop = peekSymStack();
           if(rec != NULL) {
             st_insert(rec->scope, t, -1, NULL);
           }
@@ -222,7 +222,7 @@ static void insertNode( TreeNode * t) {
 void buildSymtab(TreeNode * syntaxTree) { 
 
   // Make Gloable Scope
-  SymTable* newSymTab = st_build(topSymStack(), "global");
+  SymTable* newSymTab = st_build(peekSymStack(), "global");
   pushSymStack(newSymTab);
 
   // Make Built-in function
@@ -248,8 +248,8 @@ void buildSymtab(TreeNode * syntaxTree) {
   inputFunc->lineno = 0;
   inputFunc->attr.name = "input";
   inputFunc->type = Integer;
-  inputFunc->curTop = topSymStack();
-  SymTable* inputSymTab = st_build(topSymStack(), inputFunc->attr.name);
+  inputFunc->curTop = peekSymStack();
+  SymTable* inputSymTab = st_build(peekSymStack(), inputFunc->attr.name);
 
   
 
@@ -257,10 +257,10 @@ void buildSymtab(TreeNode * syntaxTree) {
   outputFunc->lineno = 0;
   outputFunc->attr.name = "output";
   outputFunc->type = Void;
-  outputFunc->curTop = topSymStack();
+  outputFunc->curTop = peekSymStack();
 
 
-  SymTable* outputSymTab = st_build(topSymStack(), outputFunc->attr.name);
+  SymTable* outputSymTab = st_build(peekSymStack(), outputFunc->attr.name);
   SymRec* outputParam = (SymRec*) malloc(sizeof(SymRec));
   outputParam->name = "value";
   outputParam->type = Integer;
@@ -271,8 +271,8 @@ void buildSymtab(TreeNode * syntaxTree) {
   outputParam->next = NULL;
 
   outputSymTab->head = outputParam;
-  st_insert(topSymStack(), inputFunc, 0, inputSymTab);
-  st_insert(topSymStack(), outputFunc, 1, outputSymTab);
+  st_insert(peekSymStack(), inputFunc, 0, inputSymTab);
+  st_insert(peekSymStack(), outputFunc, 1, outputSymTab);
 
   traverse(syntaxTree,insertNode,insertEnd);
 
