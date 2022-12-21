@@ -1,9 +1,5 @@
-int func(void a) {
-	return 1;
+void main(void) {
+	x+1;
 }
 
-void main(void) {
-	void b;
-	
-	func(c);
-}
+int x;

@@ -20,6 +20,7 @@ struct StackNode_{
 
 StackNode* symStack;
 int alreadyCreated;
+int hasReturn;
 char* funcName;
 
 
@@ -72,16 +73,18 @@ static void traverse( TreeNode * t, void (* preProc) (TreeNode *), void (* postP
   }
 }
 
-/* nullProc is a do-nothing procedure to 
- * generate preorder-only or postorder-only
- * traversals from traverse
- */
 static void nullProc(TreeNode * t) { 
   if (t==NULL) {
     return;
   }
   else {
     return;
+  }
+}
+
+static void returnCheck(TreeNode * t) { 
+  if(t->nodekind == DeclK && t->kind.decl == FuncK) {
+    hasReturn = FALSE;
   }
 }
 
@@ -173,8 +176,6 @@ static void insertNode( TreeNode * t) {
                 param = param->sibling;
               }
             }
-            printf("ASDSAD: %s, %d\n", t->attr.name, paramNum);
-
             st_insert(newSymTab, t, paramNum);
             pushSymStack(newSymTab);
           }
@@ -232,7 +233,7 @@ static void insertNode( TreeNode * t) {
             st_insert(rec->scope, t, -1);
           }
           else {
-            t->type = Undefined;
+            t->type = Undeclared;
           }
           break;
       
@@ -243,7 +244,7 @@ static void insertNode( TreeNode * t) {
             st_insert(globalTab, t, -1);
           }
           else {
-            t->type = Undefined;
+            t->type = Undeclared;
           }
           break;
         case AssignK:
@@ -351,6 +352,9 @@ static void checkNode(TreeNode * t) {
           }
           break;
         case FuncK:
+          if(t->type == Integer && hasReturn == FALSE) {
+            printError(t, 10);
+          }
           break;
         case ParamK:
           if(t->type == Void) {
@@ -377,12 +381,14 @@ static void checkNode(TreeNode * t) {
           break;
         case ReturnK:
           rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
+          hasReturn = TRUE;
           if(rec->type != t->child[0]->type) {
             printError(t, 10);
           }
           break;
         case ReturnNonK:
           rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
+          hasReturn = TRUE;
           if(rec->type != Void) {
             printError(t, 10);
           }
@@ -397,7 +403,7 @@ static void checkNode(TreeNode * t) {
       switch (t->kind.exp) { 
         case VarAccessK: ;
           //There is no variable looking for
-          if(t->type == Undefined) {
+          if(t->type == Undeclared) {
             printError(t, 1);
           }
           //There is the variable looking for
@@ -427,7 +433,7 @@ static void checkNode(TreeNode * t) {
           }
           break;
         case CallK: ;
-          if(t->type == Undefined) {
+          if(t->type == Undeclared) {
             printError(t, 0);
           }
           else {
@@ -520,5 +526,5 @@ static void checkNode(TreeNode * t) {
  * by a postorder syntax tree traversal
  */
 void typeCheck(TreeNode * syntaxTree) { 
-  traverse(syntaxTree,nullProc,checkNode);
+  traverse(syntaxTree,returnCheck,checkNode);
 }
