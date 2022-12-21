@@ -76,8 +76,8 @@ static void traverse( TreeNode * t, void (* preProc) (TreeNode *), void (* postP
  * generate preorder-only or postorder-only
  * traversals from traverse
  */
-static void nullProc(TreeNode * t)
-{ if (t==NULL) {
+static void nullProc(TreeNode * t) { 
+  if (t==NULL) {
     return;
   }
   else {
@@ -102,18 +102,17 @@ static void insertEnd(TreeNode * t) {
  * the symbol table 
  */
 static void insertNode( TreeNode * t) { 
-
   SymRec* rec;
-
+  
   switch (t->nodekind) { 
     case DeclK:
       switch (t->kind.decl) {
         case VarK:
-          if(st_lookup_cur_table(peekSymStack(), t->attr.name, -1) == -1) {
+          if(st_lookup_cur_table(peekSymStack(), t->attr.name, ISVAR) == -1) {
             st_insert(peekSymStack(), t, -1, NULL);
           }
           else {
-            //Error?
+            printError(t, 2);
           }
           break;
         case FuncK:
@@ -135,15 +134,15 @@ static void insertNode( TreeNode * t) {
             pushSymStack(newSymTab);
           }
           else {
-            //Error?
+            printError(t, 2);
           }
           break;
         case ParamK:
-          if(st_lookup_cur_table(peekSymStack(), t->attr.name, -1) == -1) {
+          if(st_lookup_cur_table(peekSymStack(), t->attr.name, ISVAR) == -1) {
             st_insert(peekSymStack(), t, -1, NULL);
           }
           else {
-            //Error?
+            printError(t, 2);
           }
           break;
         case ParamVoidK:
@@ -157,12 +156,11 @@ static void insertNode( TreeNode * t) {
     case StmtK:
       switch (t->kind.stmt) { 
         case CompK:
-          printf("ASDSADASDAS, %d\n", alreadyCreated);
           if(!alreadyCreated)  {
             SymTable* newSymTab = st_build(peekSymStack(), NULL);
             pushSymStack(newSymTab);
+            alreadyCreated = 0;
           }
-          alreadyCreated = 0;
           break;
         case IfK:
         case IfElseK:
@@ -285,37 +283,37 @@ void buildSymtab(TreeNode * syntaxTree) {
 static void printError(TreeNode * t, int error) {
   switch (error) {
     case 0:
-      fprintf(listing, "Error: undeclared function \"%s\" is called at line %d\n", t->attr.name, t->lineno);
+      fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", t->attr.name, t->lineno);
       break;
     case 1:
-      fprintf(listing, "Error: undeclared variable \"%s\" is used at line %d\n", t->attr.name, t->lineno);
+      fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", t->attr.name, t->lineno);
       break;
     case 2:
-      fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", t->lineno, t->attr.name);
+      fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", t->lineno, t->attr.name);
       break;
     case 3:
-      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). indicies should be integer\n", t->lineno, t->attr.name);
+      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indices should be integer\n", t->lineno, t->attr.name);
       break;
     case 4:
-      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). indexing can only allowed for int[] variables\n", t->lineno, t->attr.name);
+      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indexing can only be allowed for int[] variables\n", t->lineno, t->attr.name);
       break;
     case 5:
       fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", t->lineno, t->attr.name);
       break;
     case 6:
-      fprintf(listing, "Error: Invalid return at line %d\n", t->lineno);
+      fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", t->lineno);
       break;
     case 7:
-      fprintf(listing, "Error: invalid assignment at line %d\n", t->lineno);
+      fprintf(listing, "Error: Invalid operation at line %d\n", t->lineno);
       break;
     case 8:
-      fprintf(listing, "Error: invalid operation at line %d\n", t->lineno);
+      fprintf(listing, "Error: Invalid assignment at line %d\n", t->lineno);
       break;
     case 9:
-      fprintf(listing, "Error: invalid condition at line %d\n", t->lineno);
+      fprintf(listing, "Error: Invalid condition at line %d\n", t->lineno);
       break;
     case 10:
-      fprintf(listing, "Error: redeclared\n");
+      fprintf(listing, "Error: Invalid return at line %d\n");
       break;
     default:
       fprintf(listing, "Error: Unknown Error\n");

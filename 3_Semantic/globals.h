@@ -44,6 +44,10 @@
 #define TRUE 1
 #endif
 
+#ifndef ISVAR
+#define ISVAR -1
+#endif
+
 /* MAXRESERVED = the number of reserved words */
 #define MAXRESERVED 6
 

@@ -51,7 +51,6 @@ void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* func
     rec = rec->next;
   }
 
-  /* variable not yet in table */
   if (rec == NULL) { 
     rec = (SymRec*) malloc(sizeof(SymRec));
     rec->name = astNode->attr.name;
@@ -74,7 +73,7 @@ void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* func
       prevRec->next = rec;
     }
   }
-  /* found in table, so just add line number */
+
   else { 
     LineNode* lineNode = rec->lines;
     while (lineNode->next != NULL) {
@@ -87,9 +86,6 @@ void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* func
 }
 
 
-/* Function st_lookup returns the memory 
- * location of a variable or -1 if not found
- */
 int st_lookup_cur_table (SymTable* symTab, char * name, int kind) { 
   SymRec* rec = symTab->head;
 

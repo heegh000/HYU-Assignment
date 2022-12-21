@@ -17,23 +17,20 @@ typedef struct SymTable_ SymTable;
 
 struct LineNode_{ 
   int lineno;
-  struct LineNode_* next;
-
+  LineNode* next;
 };
-
 
 struct SymRec_{ 
   char * name;
   ExpType type;
   int loc;
-  SymTable* scope; 
+  SymTable* scope;
   LineNode* lines;
 
   int paramNum;
   SymTable* funcScope; 
 
   SymRec* next;
-
 };
 
 struct SymTable_{  
@@ -42,27 +39,15 @@ struct SymTable_{
   SymRec* head;
   SymTable* parent;
   SymTable* next; // for using when printing
-
 };
 
 SymTable* st_build(SymTable*, char*);
 
-/* Procedure st_insert inserts line numbers and
- * memory locations into the symbol table
- * loc = memory location is inserted only the
- * first time, otherwise ignored
- */
+
 void st_insert(SymTable*, TreeNode*, int, SymTable*);
-/* Function st_lookup returns the memory 
- * location of a variable or -1 if not found
- */
 int st_lookup_cur_table(SymTable*, char *, int);
 SymRec* st_lookup(SymTable*, char *, int);
   
-/* Procedure printSymTab prints a formatted 
- * listing of the symbol table contents 
- * to the listing file
- */
 void printSymTab(FILE * listing);
 
 #endif
