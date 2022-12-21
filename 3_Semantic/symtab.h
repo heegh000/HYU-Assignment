@@ -24,11 +24,12 @@ struct SymRec_{
   char * name;
   ExpType type;
   int loc;
+  // If var, a scope where the var is defined, 
+  // If func, a scope of func 
   SymTable* scope;
   LineNode* lines;
 
   int paramNum;
-  SymTable* funcScope; 
 
   SymRec* next;
 };
@@ -41,11 +42,12 @@ struct SymTable_{
   SymTable* next; // for using when printing
 };
 
+
+SymTable* globalTab;
+
 SymTable* st_build(SymTable*, char*);
-
-
-void st_insert(SymTable*, TreeNode*, int, SymTable*);
-int st_lookup_cur_table(SymTable*, char *, int);
+void st_insert(SymTable*, TreeNode*, int);
+SymRec* st_lookup_target_table(SymTable*, char *, int);
 SymRec* st_lookup(SymTable*, char *, int);
   
 void printSymTab(FILE * listing);

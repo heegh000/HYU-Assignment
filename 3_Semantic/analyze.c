@@ -85,7 +85,7 @@ static void nullProc(TreeNode * t) {
   }
 }
 
-static void insertEnd(TreeNode * t) {
+static void scopeEnd(TreeNode * t) {
   if(t->nodekind == DeclK && t->kind.decl == FuncK) {
     funcName = NULL;
   }
@@ -95,6 +95,48 @@ static void insertEnd(TreeNode * t) {
   else {
     return ;
   }
+}
+
+static void printError(TreeNode * t, int error) {
+  switch (error) {
+    case 0:
+      fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", t->attr.name, t->lineno);
+      break;
+    case 1:
+      fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", t->attr.name, t->lineno);
+      break;
+    case 2:
+      fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", t->attr.name, t->lineno);
+      break;
+    case 3:
+      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indices should be integer\n", t->lineno, t->attr.name);
+      break;
+    case 4:
+      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indexing can only be allowed for int[] variables\n", t->lineno, t->attr.name);
+      break;
+    case 5:
+      fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", t->lineno, t->attr.name);
+      break;
+    case 6:
+      fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", t->lineno, t->attr.name);
+      break;
+    case 7:
+      fprintf(listing, "Error: Invalid operation at line %d\n", t->lineno);
+      break;
+    case 8:
+      fprintf(listing, "Error: Invalid assignment at line %d\n", t->lineno);
+      break;
+    case 9:
+      fprintf(listing, "Error: Invalid condition at line %d\n", t->lineno);
+      break;
+    case 10:
+      fprintf(listing, "Error: Invalid return at line %d\n", t->lineno);
+      break;
+    default:
+      fprintf(listing, "Error: Unknown Error\n");
+      break;
+  }
+  Error = TRUE;
 }
 
 /* Procedure insertNode inserts 
@@ -108,29 +150,32 @@ static void insertNode( TreeNode * t) {
     case DeclK:
       switch (t->kind.decl) {
         case VarK:
-          if(st_lookup_cur_table(peekSymStack(), t->attr.name, ISVAR) == -1) {
-            st_insert(peekSymStack(), t, -1, NULL);
+          if(st_lookup_target_table(peekSymStack(), t->attr.name, VARIABLE) == NULL) {
+            st_insert(peekSymStack(), t, -1);
           }
           else {
             printError(t, 2);
           }
           break;
         case FuncK:
-          if(st_lookup_cur_table(peekSymStack(), t->attr.name, 0) == -1) {
-            alreadyCreated = 1;
+          if(st_lookup_target_table(peekSymStack(), t->attr.name, 0) == NULL) {
+            alreadyCreated = TRUE;
+
             funcName = t->attr.name;
 
             SymTable* newSymTab = st_build(peekSymStack(), t->attr.name);
             
             TreeNode* param = t->child[0]; 
             int paramNum = 0;
-
-            while(param != NULL) {
-              paramNum++;
-              param = param->sibling;
+            if(param->kind.decl != ParamVoidK) {
+              while(param != NULL) {
+                paramNum++;
+                param = param->sibling;
+              }
             }
+            printf("ASDSAD: %s, %d\n", t->attr.name, paramNum);
 
-            st_insert(peekSymStack(), t, paramNum, newSymTab);
+            st_insert(newSymTab, t, paramNum);
             pushSymStack(newSymTab);
           }
           else {
@@ -138,8 +183,8 @@ static void insertNode( TreeNode * t) {
           }
           break;
         case ParamK:
-          if(st_lookup_cur_table(peekSymStack(), t->attr.name, ISVAR) == -1) {
-            st_insert(peekSymStack(), t, -1, NULL);
+          if(st_lookup_target_table(peekSymStack(), t->attr.name, VARIABLE) == NULL) {
+            st_insert(peekSymStack(), t, -1);
           }
           else {
             printError(t, 2);
@@ -159,8 +204,8 @@ static void insertNode( TreeNode * t) {
           if(!alreadyCreated)  {
             SymTable* newSymTab = st_build(peekSymStack(), NULL);
             pushSymStack(newSymTab);
-            alreadyCreated = 0;
           }
+          alreadyCreated = FALSE;
           break;
         case IfK:
         case IfElseK:
@@ -168,11 +213,9 @@ static void insertNode( TreeNode * t) {
           break;
         case ReturnK:
           t->attr.name = funcName;
-          t->curTop = peekSymStack();
           break;
         case ReturnNonK:
           t->attr.name = funcName;
-          t->curTop = peekSymStack();
           break;
         default:
           break;
@@ -183,18 +226,24 @@ static void insertNode( TreeNode * t) {
     case ExpK:
       switch (t->kind.exp) { 
         case VarAccessK: ;
-          rec = st_lookup(peekSymStack(), t->attr.name, -1);
-          t->curTop = peekSymStack();
+          rec = st_lookup(peekSymStack(), t->attr.name, VARIABLE);
+          t->curScope = peekSymStack();
           if(rec != NULL) {
-            st_insert(rec->scope, t, -1, NULL);
+            st_insert(rec->scope, t, -1);
+          }
+          else {
+            t->type = Undefined;
           }
           break;
       
         case CallK: ;
-          rec = st_lookup(peekSymStack(), t->attr.name, 0);
-          t->curTop = peekSymStack();
+          rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
+          t->curScope = peekSymStack();
           if(rec != NULL) {
-            st_insert(rec->scope, t, -1, NULL);
+            st_insert(globalTab, t, -1);
+          }
+          else {
+            t->type = Undefined;
           }
           break;
         case AssignK:
@@ -221,6 +270,7 @@ void buildSymtab(TreeNode * syntaxTree) {
 
   // Make Gloable Scope
   SymTable* newSymTab = st_build(peekSymStack(), "global");
+  globalTab = newSymTab;
   pushSymStack(newSymTab);
 
   // Make Built-in function
@@ -246,7 +296,7 @@ void buildSymtab(TreeNode * syntaxTree) {
   inputFunc->lineno = 0;
   inputFunc->attr.name = "input";
   inputFunc->type = Integer;
-  inputFunc->curTop = peekSymStack();
+  inputFunc->curScope = peekSymStack();
   SymTable* inputSymTab = st_build(peekSymStack(), inputFunc->attr.name);
 
   
@@ -255,7 +305,7 @@ void buildSymtab(TreeNode * syntaxTree) {
   outputFunc->lineno = 0;
   outputFunc->attr.name = "output";
   outputFunc->type = Void;
-  outputFunc->curTop = peekSymStack();
+  outputFunc->curScope = peekSymStack();
 
 
   SymTable* outputSymTab = st_build(peekSymStack(), outputFunc->attr.name);
@@ -264,15 +314,14 @@ void buildSymtab(TreeNode * syntaxTree) {
   outputParam->type = Integer;
   outputParam->loc = 0;
   outputParam->scope = outputSymTab;
-  outputParam->paramNum = 0;
-  outputParam->funcScope = NULL;
+  outputParam->paramNum = -1;
   outputParam->next = NULL;
 
   outputSymTab->head = outputParam;
-  st_insert(peekSymStack(), inputFunc, 0, inputSymTab);
-  st_insert(peekSymStack(), outputFunc, 1, outputSymTab);
+  st_insert(inputSymTab, inputFunc, 0);
+  st_insert(outputSymTab, outputFunc, 1);
 
-  traverse(syntaxTree,insertNode,insertEnd);
+  traverse(syntaxTree,insertNode, scopeEnd);
 
   if (TraceAnalyze) { 
     fprintf(listing,"\nSymbol table:\n\n");
@@ -280,47 +329,7 @@ void buildSymtab(TreeNode * syntaxTree) {
   }
 }
 
-static void printError(TreeNode * t, int error) {
-  switch (error) {
-    case 0:
-      fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", t->attr.name, t->lineno);
-      break;
-    case 1:
-      fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", t->attr.name, t->lineno);
-      break;
-    case 2:
-      fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", t->lineno, t->attr.name);
-      break;
-    case 3:
-      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indices should be integer\n", t->lineno, t->attr.name);
-      break;
-    case 4:
-      fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indexing can only be allowed for int[] variables\n", t->lineno, t->attr.name);
-      break;
-    case 5:
-      fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", t->lineno, t->attr.name);
-      break;
-    case 6:
-      fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", t->lineno);
-      break;
-    case 7:
-      fprintf(listing, "Error: Invalid operation at line %d\n", t->lineno);
-      break;
-    case 8:
-      fprintf(listing, "Error: Invalid assignment at line %d\n", t->lineno);
-      break;
-    case 9:
-      fprintf(listing, "Error: Invalid condition at line %d\n", t->lineno);
-      break;
-    case 10:
-      fprintf(listing, "Error: Invalid return at line %d\n");
-      break;
-    default:
-      fprintf(listing, "Error: Unknown Error\n");
-      break;
-  }
-  Error = TRUE;
-}
+
 
 /* Procedure checkNode performs
  * type checking at a single tree node
@@ -333,7 +342,7 @@ static void checkNode(TreeNode * t) {
       switch (t->kind.decl) {
         case VarK:
           if(t->type == Void) {
-            printError(t, 2);
+            printError(t, 6);
           }
           else if(t->type == IntegerArr) {
             if(t->child[0]->type != Integer) {
@@ -342,7 +351,11 @@ static void checkNode(TreeNode * t) {
           }
           break;
         case FuncK:
-        case ParamK: 
+          break;
+        case ParamK:
+          if(t->type == Void) {
+            printError(t, 6);
+          }
         case ParamVoidK:
           break;
         default:
@@ -363,17 +376,16 @@ static void checkNode(TreeNode * t) {
           }
           break;
         case ReturnK:
-          rec = st_lookup(t->curTop, t->attr.name, 0);
+          rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
           if(rec->type != t->child[0]->type) {
-            printError(t, 6);
+            printError(t, 10);
           }
           break;
         case ReturnNonK:
-          rec = st_lookup(t->curTop, t->attr.name, 0);
+          rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
           if(rec->type != Void) {
-            printError(t, 6);
+            printError(t, 10);
           }
-
           break;
         default:
           break;
@@ -384,24 +396,29 @@ static void checkNode(TreeNode * t) {
     case ExpK:
       switch (t->kind.exp) { 
         case VarAccessK: ;
-          rec = st_lookup(t->curTop, t->attr.name, -1);
-          if(rec == NULL) {
+          //There is no variable looking for
+          if(t->type == Undefined) {
             printError(t, 1);
-            t->type = Undefined;
           }
+          //There is the variable looking for
           else {
+            rec = st_lookup(t->curScope, t->attr.name, VARIABLE);
+            
+            //Access integer
             if(t->child[0] == NULL) { 
               t->type = rec->type;
             } 
+            //Access integer array
             else {
+              //the variable is not array
               if(rec->type != IntegerArr) {
                 printError(t, 4);
-                t->type = Integer; //
+                t->type = Integer; //7p 1번 예시
               }
+              //index is not integer
               else if(t->child[0]->type != Integer) {
                   printError(t,3);
-                  t->type = Integer; //
-
+                  t->type = Integer; //7p 1번 예시
               }
               else {
                 t->type = Integer;
@@ -410,21 +427,21 @@ static void checkNode(TreeNode * t) {
           }
           break;
         case CallK: ;
-          rec = st_lookup(t->curTop, t->attr.name, 0);
-          if(rec == NULL) {
+          if(t->type == Undefined) {
             printError(t, 0);
-            t->type = Undefined; //
           }
           else {
+            rec = st_lookup_target_table(globalTab, t->attr.name, FUNCTION);
             TreeNode* arg = t->child[0];
 
+            //There is no argument
             if(arg == NULL) {
               if(rec->paramNum == 0) {
                 t->type = rec->type;
               }
               else {
                 printError(t, 5);
-                t->type = rec->type; //
+                t->type = rec->type; // 7p 1번 예시
               }
             }
 
@@ -436,37 +453,41 @@ static void checkNode(TreeNode * t) {
                 arg = arg->sibling;
               }
 
+              //# of Argument is not matched
               if(argsNum != rec->paramNum) {
                 printError(t, 5);
-                t->type = rec->type; //
+                t->type = rec->type; // 7p 1번 예시
               }
+
               else {
-                int isMatched = 1;
+                int isMatched = TRUE;
                 arg = t->child[0];
-                SymRec* param = rec->funcScope->head;
+
+                SymRec* param = rec->scope->head;
+
                 while(arg != NULL) {
                   if(param->type != arg->type) {
-                    isMatched = 0 ;
+                    isMatched = FALSE;
                   }
                   param = param->next;
                   arg = arg->sibling;
                 }
-                if(!isMatched) {
-                  printError(t, 5);
-                  t->type = rec->type; //
+
+                if(isMatched) {
+                  t->type = rec->type;
                 }
                 else {
-                  t->type = rec->type;
+                  printError(t, 5);
+                  t->type = rec->type; // 7p 1번 예시
                 }
 
               }
             }
-
           }
           break;
         case AssignK:
           if(t->child[0]->type != t->child[1]->type) {
-            printError(t, 7);
+            printError(t, 8);
           }
           else {
             t->type = t->child[0]->type;
@@ -474,7 +495,8 @@ static void checkNode(TreeNode * t) {
           break;
         case OpK:
           if(t->child[0]->type != Integer || t->child[1]->type != Integer) {
-            printError(t, 8);
+            printError(t, 7);
+            //t->type = Integer; //메일 질문 4번에 의한 주석처리
           }
           else {
             t->type = Integer;

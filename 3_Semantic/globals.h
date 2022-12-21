@@ -44,8 +44,12 @@
 #define TRUE 1
 #endif
 
-#ifndef ISVAR
-#define ISVAR -1
+#ifndef VARIABLE
+#define VARIABLE -1
+#endif
+
+#ifndef FUNCTION
+#define FUNCTION 0
 #endif
 
 /* MAXRESERVED = the number of reserved words */
@@ -89,7 +93,7 @@ typedef struct treeNode
              int val;
              char * name; } attr;
      ExpType type; /* for type checking of exps */
-     SymTable* curTop;
+     SymTable* curScope;
    } TreeNode;
 
 /**************************************************/

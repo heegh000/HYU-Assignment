@@ -42,8 +42,17 @@ SymTable* st_build(SymTable* parent, char* name) {
 }
 
 
-void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* funcTab) {
-  SymRec* rec = symTab->head;
+void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum) {
+
+  SymTable* targetTab;
+  if(paramNum == VARIABLE) {
+    targetTab = symTab;
+  }
+  else {
+    targetTab = globalTab;
+  }
+
+  SymRec* rec = targetTab->head;
   SymRec* prevRec = NULL;
 
   while ((rec != NULL) && (strcmp(astNode->attr.name, rec->name) != 0)) {
@@ -55,19 +64,16 @@ void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* func
     rec = (SymRec*) malloc(sizeof(SymRec));
     rec->name = astNode->attr.name;
     rec->type = astNode->type;
-    rec->loc = symTab->loc++;
+    rec->loc = targetTab->loc++;
     rec->scope = symTab;
     rec->lines = (LineNode*) malloc(sizeof(LineNode));
     rec->lines->lineno = astNode->lineno;
     rec->next = NULL;
 
     rec->paramNum = paramNum;
-    if(paramNum >= 0) {
-      rec->funcScope = funcTab;
-    }
 
     if(prevRec == NULL) {
-      symTab->head = rec;
+      targetTab->head = rec;
     }
     else {
       prevRec->next = rec;
@@ -86,38 +92,39 @@ void st_insert(SymTable* symTab, TreeNode* astNode, int paramNum, SymTable* func
 }
 
 
-int st_lookup_cur_table (SymTable* symTab, char * name, int kind) { 
+SymRec* st_lookup_target_table (SymTable* symTab, char * name, int kind) { 
   SymRec* rec = symTab->head;
 
-  if(kind == -1) {
-    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum != -1) ) )) {
+  if(kind == VARIABLE) {
+    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum != VARIABLE) ) )) {
       rec = rec->next;
     }
   } 
   else {
-    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum == -1) ) )) {
+    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum == VARIABLE) ) )) {
       rec = rec->next;
     }
   }
 
     
   if (rec == NULL) {
-    return -1;
+    return NULL;
   }
   else {
-    return rec->loc;
+    return rec;
   }
 }
 
 SymRec* st_lookup (SymTable* symTab, char* name, int kind)  {
   SymRec* rec = symTab->head;
-  if(kind == -1) {
-    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum != -1) ) )) {
+
+  if(kind == VARIABLE) {
+    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum != VARIABLE) ) )) {
       rec = rec->next;
     }
   } 
   else {
-    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum == -1) ) )) {
+    while ((rec != NULL) && ( (strcmp(name, rec->name) != 0) || ( strcmp(name, rec->name) == 0 && (rec->paramNum == VARIABLE) ) )) {
       rec = rec->next;
     }
   }
@@ -158,18 +165,37 @@ void printSymTab(FILE* listing) {
         fprintf(listing,"Symbol Table %s\n", tab->name);
       }
 
-      fprintf(listing,"Variable Name   type   Location   Line Numbers\n");
-      fprintf(listing,"-------------   ----   --------   ------------\n");
+      fprintf(listing,"Variable Name   type   Location   kind   Line Numbers\n");
+      fprintf(listing,"-------------   ----   --------   ----   ------------\n");
       while (rec != NULL) {
         fprintf(listing,"%-16s", rec->name);
-        fprintf(listing, "%-8d", rec->type);
+
+        if(rec->type == Integer) {
+          fprintf(listing, "%-8s", "int");
+        }
+        else if(rec->type == Void) {
+          fprintf(listing, "%-8s", "void");
+        }
+        else if(rec->type == IntegerArr) {
+          fprintf(listing, "%-8s", "intArr");
+        }
         fprintf(listing,"%-8d  ",rec->loc);
-         lineNode = rec->lines;
+        lineNode = rec->lines;
+        
+        if(rec->paramNum == VARIABLE) {
+          fprintf(listing,"%4s", "var");
+        }
+        else {
+          fprintf(listing,"%4s", "func");
+        }
 
         while (lineNode != NULL) { 
             fprintf(listing,"%4d ", lineNode->lineno);
             lineNode = lineNode->next;
         }
+
+
+
         fprintf(listing,"\n");
         rec = rec->next;
       }
