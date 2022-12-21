@@ -419,12 +419,12 @@ static void checkNode(TreeNode * t) {
               //the variable is not array
               if(rec->type != IntegerArr) {
                 printError(t, 4);
-                t->type = Integer; //7p 1번 예시
+                t->type = Integer; //testcase 4
               }
               //index is not integer
               else if(t->child[0]->type != Integer) {
                   printError(t,3);
-                  t->type = Integer; //7p 1번 예시
+                  t->type = Integer; //testcase 4
               }
               else {
                 t->type = Integer;
