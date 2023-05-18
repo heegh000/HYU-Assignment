@@ -8,14 +8,14 @@ xv6에 scheduler, LWP(thread), reader/writer lock, double/triple inode, thread s
 
 Project 1
 ---
-- xv6의 기본 Round Robin Scheduler에서 Multi-Level Feedback Queue와 Stride Scheduler을 결합한 새로운 scheduler를 구현하는 과제입니다.
+- 기존 xv6의 Round Robin Scheduler에서 Multi-Level Feedback Queue와 Stride Scheduler을 결합한 새로운 scheduler를 구현하는 과제입니다.
 
 - MLFQ + Stride 구현 전 디자인: [Milestone 1](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project1-Milestone1)
 - MLFQ + Stride 구현 후 리포트: [Milestone 2](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project1-Milestone2)
 
 Project 2
 ---
-- Project 1에서 구현한 xv6를 바탕으로 Light weight process 즉 thread를 구현하는 과제입니다.
+- Project 1에서 구현한 xv6를 바탕으로 Light Weight Process 즉 thread를 구현하는 과제입니다.
 
 - thread 구현 전 디자인: [Milestone 1](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project2-Milestone1)
 - thread system call 구현 후 리포트: [Milestone 2](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project2-Milestone2)
