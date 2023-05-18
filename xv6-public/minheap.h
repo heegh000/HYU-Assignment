@@ -1,6 +1,6 @@
 //for stride scheduling
 struct node {
-	int idx;
-	uint passval;
+  int idx;
+  uint passval;
 };
 

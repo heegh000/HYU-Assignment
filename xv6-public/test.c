@@ -1,113 +1,169 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
-#include "fcntl.h"
 
-#define N 100
-#define SIZE 1024
-#define FSIZE 16 * 1024 * 1024
-struct test {
-    char file[SIZE];
-};
-char buf[512];
+#define NUM_THREAD 5
 
-void
-save(char* filename)
+int status;
+thread_t thread[NUM_THREAD];
+int expected[NUM_THREAD];
+
+void failed()
 {
-    int fd;
-    struct test t;
-    for (int i = 0; i < SIZE; i++) t.file[i] = '1';
-    fd = open(filename, O_CREATE | O_RDWR);
-    if(fd >= 0) {
-        printf(1, "Create Success\n");
-    } else {
-        printf(1, "Error: Create failed\n");
-        exit();
-    }
-
-    int size = sizeof(t);
-    printf(1, "[%d]", size);
-    for (int i = 0; i < 1024; i++){
-            for (int j = 0; j < 16; j++){
-            if(write(fd, &t, size) != size){
-                printf(1, "Error: Write failed\n");
-                exit();
-            }
-        }
-    }
-    printf(1, "write ok\n");
-    close(fd);
+  printf(1, "Test failed!\n");
+  exit();
 }
 
-void
-load(char* filename)
+void *thread_basic(void *arg)
 {
-    int fd;
-    struct test t;
-    fd = open(filename, O_RDONLY);
-    if(fd >= 0) {
-        printf(1, "Open Success\n");
-    } else {
-        printf(1, "Error: open failed\n");
-        exit();
-    }
-
-    int size = sizeof(t);
-    if(read(fd, &t, size) != size){
-        printf(1, "Error: read failed\n");
-        exit();
-    }
-    printf(1, "Read Success\n");
-    close(fd);
+  int val = (int)arg;
+  printf(1, "Thread %d start\n", val);
+  if (val == 1) {
+    sleep(200);
+    status = 1;
+  }
+  printf(1, "Thread %d end\n", val);
+  thread_exit(arg);
+  return 0;
 }
-void
-printFile(int fd, char *name, int line)
+
+void *thread_fork(void *arg)
 {
-    int i, n; //here the size of the read chunk is defined by n, and i is used to keep a track of the chunk index
-    int l, c; // here line number is defined by l, and the character count in the string is defined by c
+  int val = (int)arg;
+  int pid;
 
-    l = c = 0;
-
-  while((n = read(fd, buf, sizeof(buf))) > 0 )
-  {
-    for(i=0;i<=n ;i++)
-    {            
-        //print the characters in the line 
-        if(buf[i]!='\n'){         
-            printf(1,"%c",buf[i]);
-        }   
-        //if the number of lines is equal to l, then exit
-        else if (l == (line-1)){
-        printf(1,"\n");   
-        exit();
-        }
-        //if the number of lines is not equal to l, then jump to next line and increment the value of l 
-        else{
-            printf(1,"\n");
-            l++;
-        } 
-    }
+  printf(1, "Thread %d start\n", val);
+  pid = fork();
+  if (pid < 0) {
+    printf(1, "Fork error on thread %d\n", val);
+    failed();
   }
 
-  if(n < 0){
-    printf(1, "printFile: read error\n");
+  if (pid == 0) {
+    printf(1, "Child of thread %d start\n", val);
+    sleep(100);
+    status = 3;
+    printf(1, "Child of thread %d end\n", val);
     exit();
+  }
+  else {
+    status = 2;
+    if (wait() == -1) {
+      printf(1, "Thread %d lost their child\n", val);
+      failed();
+    }
+  }
+  printf(1, "Thread %d end\n", val);
+  thread_exit(arg);
+  return 0;
+}
+
+int *ptr;
+
+void *thread_sbrk(void *arg)
+{
+  int val = (int)arg;
+  printf(1, "Thread %d start\n", val);
+     
+  int i, j; 
+  if (val == 0) {
+    ptr = (int *)malloc(65536);
+    sleep(100);
+    free(ptr);
+    ptr = 0;
+  }
+  else {
+    while (ptr == 0)
+      sleep(1);
+    for (i = 0; i < 16384; i++)
+      ptr[i] = val;
+  }
+  while (ptr != 0)
+    sleep(1);
+  
+  for (i = 0; i < 2000; i++) {
+    int *p = (int *)malloc(65536);
+    for (j = 0; j < 16384; j++)
+      p[j] = val;
+    for (j = 0; j < 16384; j++) {
+      if (p[j] != val) {
+        printf(1, "Thread %d found %d\n", val, p[j]);
+        failed();
+      }
+    }
+    free(p);
+  }
+
+  thread_exit(arg);
+  return 0;
+}
+void create_all(int n, void *(*entry)(void *))
+{
+  int i;
+  for (i = 0; i < n; i++) {
+    int pid;
+    if ((pid = thread_create(&thread[i], entry, (void *)i)) != 0) {
+      printf(1, "Error creating thread %d\n", i);
+      failed();
+    }
+    sleep(50);
   }
 }
 
-int
-main(void)
+void join_all(int n)
 {
-    //exit();
-    char filename[5] = "test";
-    char n = '0';
-    for (int i = 0; i < 4; i++){
-    n = i + '0';
-    filename[4] = n;
-    save(filename);
-    //printFile(fd, filename, 10);
-    load(filename);
-    if (unlink(filename)<0) printf(1, "unlink fail");
+  int i, retval;
+  for (i = 0; i < n; i++) {
+    if (thread_join(thread[i], (void **)&retval) != 0) {
+      printf(1, "Error joining thread %d\n", i);
+      failed();
     }
-    exit();
-} 
+    if (retval != expected[i]) {
+      printf(1, "Thread %d returned %d, but expected %d\n", i, retval, expected[i]);
+      failed();
+    }
+  }
+}
+
+int main(int argc, char *argv[])
+{
+  int i;
+  for (i = 0; i < NUM_THREAD; i++)
+    expected[i] = i;
+
+  printf(1, "Test 1: Basic test\n");
+
+  create_all(5, thread_basic);
+
+  sleep(100);
+  printf(1, "Parent waiting for children...\n");
+  join_all(5);
+
+  if (status != 1) {
+    printf(1, "Join returned before thread exit, or the address space is not properly shared\n");
+    failed();
+  }
+  printf(1, "Test 1 passed\n\n");
+
+  printf(1, "Test 2: Fork test\n");
+  create_all(NUM_THREAD, thread_fork);
+  join_all(NUM_THREAD);
+  if (status != 2) {
+    if (status == 3) {
+      printf(1, "Child process referenced parent's memory\n");
+    }
+    else {
+      printf(1, "Status expected 2, found %d\n", status);
+    }
+    failed();
+  }
+  printf(1, "Test 2 passed\n\n");
+
+  printf(1, "Test 3: Sbrk test\n");
+  create_all(5, thread_sbrk);
+  join_all(5);
+  printf(1, "Test 3 passed\n\n");
+
+  printf(1, "All tests passed!\n");
+  exit();
+}

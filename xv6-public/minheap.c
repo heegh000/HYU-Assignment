@@ -12,47 +12,43 @@ int heapcapa = 0;
 int 
 heapinsert(int idx, int passval)
 {
-	if (heapcapa == MAXCAPACITY - 1)
-		return -1;
+  if (heapcapa == MAXCAPACITY - 1)
+    return -1;
     
-    if(heapcapa != 0) {
-      for(int i = 0; i < heapcapa; i++) 
-        if(strheap[i].idx == idx)
+  if(heapcapa != 0) {
+    for(int i = 0; i < heapcapa; i++) 
+      if(strheap[i].idx == idx)
           return -1;
-    }
+  }
 
-	int idxtemp;
-	int passtemp;
+  int idxtemp;
+  int passtemp;
+  
+  heapcapa++;
+  strheap[heapcapa].idx = idx;
+  strheap[heapcapa].passval = passval;
 
-	heapcapa++;
-	strheap[heapcapa].idx = idx;
-	strheap[heapcapa].passval = passval;
+  int here = heapcapa;
+  int parent = here / 2;
 
-	int here = heapcapa;
-	int parent = here / 2;
+  while (1) {
+    if (here == 1 || strheap[here].passval > strheap[parent].passval)
+      break;
 
-	while (1) {
+    idxtemp = strheap[here].idx;
+    passtemp = strheap[here].passval;
 
-		if (here == 1 || strheap[here].passval > strheap[parent].passval)
-			break;
+    strheap[here].idx = strheap[parent].idx;
+    strheap[here].passval = strheap[parent].passval;
 
-		idxtemp = strheap[here].idx;
-		passtemp = strheap[here].passval;
+    strheap[parent].idx = idxtemp;
+    strheap[parent].passval = passtemp;
 
+    here = parent;
+    parent = here / 2;
+  }
 
-		strheap[here].idx = strheap[parent].idx;
-		strheap[here].passval = strheap[parent].passval;
-
-
-		strheap[parent].idx = idxtemp;
-		strheap[parent].passval = passtemp;
-
-		here = parent;
-		parent = here / 2;
-	}
-
-
-	return idx;
+  return idx;
 }
 
 //delete root node of min heap 
@@ -60,141 +56,70 @@ heapinsert(int idx, int passval)
 int
 heapdelete()
 {
-	if (heapcapa == 0) {
-		return -1;
-	}
+  if (heapcapa == 0) {
+    return -1;
+  }
 
-	int reval = strheap[1].idx;
-	int	idxtemp;
-	int passtemp;
-	int here = 1;
-	int child = here * 2;
-	
-	strheap[1].idx = strheap[heapcapa].idx;
-	strheap[1].passval = strheap[heapcapa].passval;
+  int reval = strheap[1].idx;
+  int	idxtemp;
+  int passtemp;
+  int here = 1;
+  int child = here * 2;
+  
+  strheap[1].idx = strheap[heapcapa].idx;
+  strheap[1].passval = strheap[heapcapa].passval;
 
-    strheap[heapcapa].idx = -1;
-    strheap[heapcapa].passval = -1;
+  strheap[heapcapa].idx = -1;
+  strheap[heapcapa].passval = -1;
 
-	heapcapa--;
+  heapcapa--;
 
+  while (1) {
+    if (child + 1 <= heapcapa && strheap[child].passval > strheap[child+1].passval)
+      child++;
 
-	while (1) {
-		if (child + 1 <= heapcapa && strheap[child].passval > strheap[child+1].passval)
-			child++;
+    if (child > heapcapa || strheap[child].passval > strheap[here].passval)
+      break;
 
-		if (child > heapcapa || strheap[child].passval > strheap[here].passval)
-			break;
+    idxtemp = strheap[here].idx;
+    passtemp = strheap[here].passval;
 
-		idxtemp = strheap[here].idx;
-		passtemp = strheap[here].passval;
+    strheap[here].idx = strheap[child].idx;
+    strheap[here].passval = strheap[child].passval;
 
-		strheap[here].idx = strheap[child].idx;
-		strheap[here].passval = strheap[child].passval;
+    strheap[child].idx = idxtemp;
+    strheap[child].passval = passtemp;
 
-		strheap[child].idx = idxtemp;
-		strheap[child].passval = passtemp;
+    here = child;
+    child = here * 2;
+  }
 
-		here = child;
-		child = here * 2;
-	}
-
-	return reval;
+  return reval;
 }
 
 //get the idx of root node
 int
 getidxheap() 
 {
-	if(heapcapa != 0) 
-		return strheap[1].idx;
-	return -1;
+  if(heapcapa != 0) 
+    return strheap[1].idx;
+  return -1;
 }
 
 //get thep pass value of root node
 int
 getpvheap()
 {
-	if(heapcapa != 0) 
-		return strheap[1].passval;
-	return -1;
+  if(heapcapa != 0) 
+    return strheap[1].passval;
+  return -1;
 }
 
 void
 showheap() 
 {	
-	int i =0;
-	for(i = 1; i < heapcapa+1; i++)
-		cprintf("(idx: %d, pv: %d), ", strheap[i].idx, strheap[i].passval);
-	cprintf("\n");
-
+  int i =0;
+  for(i = 1; i < heapcapa+1; i++)
+    cprintf("(idx: %d, pv: %d), ", strheap[i].idx, strheap[i].passval);
+  cprintf("\n");
 }
-
-
-/*
-struct node
-heapdelete()
-{
-	struct node renode;
-	
-	if (heapcapa == 0) {
-		renode.idx = -1;
-		renode.passval = 0;
-		return renode;
-	}
-
-	renode.idx = strheap[1].idx;
-	renode.passval = strheap[1].passval;
-
-	strheap[1].idx = strheap[heapcapa].idx;
-	strheap[1].passval = strheap[heapcapa].passval;
-
-	heapcapa--;
-
-	int here = 1;
-	int child = here * 2;
-
-	while (1) {
-		if (child + 1 <= heapcapa && strheap[child].passval > strheap[child+1].passval)
-			child++;
-
-		if (child > heapcapa || strheap[child].passval > strheap[here].passval)
-			break;
-
-
-		int idxtemp = strheap[child].idx;
-		int passtemp = strheap[child].passval;
-
-		strheap[child].idx = strheap[here].idx;
-		strheap[child].passval = strheap[here].passval;
-
-		strheap[here].idx = idxtemp;
-		strheap[here].passval = passtemp;
-
-		here = child;
-		child = here * 2;
-	}
-
-	return renode;
-}
-*/
-
-/*
-void printHeap() {
-	int i, count, newLineIndex;
-	count = 1;
-	newLineIndex = 0;
-	for (i = 1; i <= heapcapa; i++)
-	{
-		cprintf("(%d, %d)\t", strheap[i].idx, strheap[i].passval);
-		//heap tree의 각 level은 한 줄에 출력되도록 함
-		if (pow(2, newLineIndex) == count)
-		{
-			cprintf(1, "\n");
-			newLineIndex++;
-			count = 0;
-		}
-		count++;
-	}
-	printf("\n\n");
-}*/

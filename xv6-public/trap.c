@@ -121,7 +121,7 @@ trap(struct trapframe *tf)
       addtick(myproc()->mainth->idx, -1);
       yield();
     }	
-	else {
+    else {
       thread_yield();
     }
   }

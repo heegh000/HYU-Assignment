@@ -238,8 +238,8 @@ fork(void)
   for(i = 0; i < NOFILE; i++)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
-  np->cwd = idup(curproc->cwd);
 
+  np->cwd = idup(curproc->cwd);
   safestrcpy(np->name, curproc->mainth->name, sizeof(curproc->mainth->name));
 
   pid = np->pid;
@@ -396,7 +396,7 @@ wait(void)
         p->nextth = 0;
         p->prevth = 0;
         p->recentth = 0;
-		p->runblenum = 0;
+        p->runblenum = 0;
 
         for(i = 0; i < NTHREAD; i++)
           p->stack[i] = -1;
@@ -454,26 +454,24 @@ scheduler(void)
     if(mlfqpv < minpv || minpv == -1) {
 
       idx = pickprocmlfq();  
- 
+
       if(idx == -1) {
         mlfqpvadd++;
-      	if(mlfqpvadd >= 100) {
-       		mlfqtickets = 100 - sumtickets;
-        	mlfqpv += BIGNUM / mlfqtickets;	
-			mlfqpvadd = 0;
-		}
+        if(mlfqpvadd >= 100) {
+           mlfqtickets = 100 - sumtickets;
+          mlfqpv += BIGNUM / mlfqtickets;	
+          mlfqpvadd = 0;
+        }
         release(&ptable.lock);
         continue;
       }     
 
       mainth = &ptable.proc[idx];
-
       idx = thread_pick(idx);
-      
       if(idx == -1) {
         release(&ptable.lock);
-		continue;
-	  }
+        continue;
+      }
 
       beforetick = sys_uptime();
       beforeproctick = mainth->ticks;
@@ -483,10 +481,10 @@ scheduler(void)
       // before jumping back to us.
 
       c->proc = &ptable.proc[idx];
-	  switchuvm(&ptable.proc[idx]);
+      switchuvm(&ptable.proc[idx]);
       
-	  ptable.proc[idx].state = RUNNING; 
-	  mainth->runblenum--;      
+      ptable.proc[idx].state = RUNNING; 
+      mainth->runblenum--;      
 
       if(mainth->ticks == (MALLOT - 1) && mainth->level == 1 && ptable.proc[idx].killed == 0) {
         acquire(&tickslock);
@@ -502,13 +500,12 @@ scheduler(void)
      
       mlfqtickets = 100 - sumtickets;  
       pbcount += sys_uptime() - beforetick;
-	  mlfqpv += (mainth->ticks - beforeproctick) * (BIGNUM / mlfqtickets);
+      mlfqpv += (mainth->ticks - beforeproctick) * (BIGNUM / mlfqtickets);
 
       if(mainth->level == HLEVEL && mainth->ticks >= HALLOT) {
          mainth->ticks = 0;
          mainth->level = MLEVEL;
       }
-
       else if(mainth->level == MLEVEL && mainth->ticks >= MALLOT) {  
          mainth->ticks = 0;
          mainth->level = LLEVEL;
@@ -516,11 +513,11 @@ scheduler(void)
   
       if(mainth->runblenum > 0) {
         if(mainth->level != -1) {
-		  enqueue(mainth->idx, mainth->level);
+          enqueue(mainth->idx, mainth->level);
         }
         else {
           passval = getpvheap();
-		  if(mlfqpv < passval || passval == -1)
+          if(mlfqpv < passval || passval == -1)
             passval = mlfqpv;
           heapinsert(mainth->idx, passval);
         }
@@ -536,25 +533,25 @@ scheduler(void)
       c->proc = 0;
     }
 
-  //picks other proceesses of the stride scheduler
-  else {
-      
+    //picks other proceesses of the stride scheduler
+    else {
+        
       idx = heapdelete();
 
-	  mainth = &ptable.proc[idx];
-	  idx = thread_pick(idx);
+      mainth = &ptable.proc[idx];
+      idx = thread_pick(idx);
       if(idx == -1) {
         release(&ptable.lock);
-		continue;
-	  }
-     
+      continue;
+      }
+      
       beforeproctick = mainth->ticks;
 
       c->proc = &ptable.proc[idx];
       switchuvm(&ptable.proc[idx]);
 
       ptable.proc[idx].state = RUNNING; 
-	  mainth->runblenum--;
+      mainth->runblenum--;
 
       swtch(&(c->scheduler), ptable.proc[idx].context);
       switchkvm();
@@ -694,28 +691,24 @@ wakeup1(void *chan)
     if(p->state == SLEEPING && p->chan == chan) {
       
       p->state = RUNNABLE;
-	  mainth = p->mainth;
-	  mainth->runblenum ++;
+      mainth = p->mainth;
+      mainth->runblenum ++;
       
-	  if(mainth->runblenum == 1) {
-        
+      if(mainth->runblenum == 1) {
         if(mainth->level != -1) {
-  	      if(chan == &ticks) {
+          if(chan == &ticks) { 
             mainth->level = 0;
-  		    mainth->ticks = 0;
-			enqueue(mainth->idx, HLEVEL);
-  		  }
-  		  else {
-  	 	    enqueue(mainth->idx, mainth->level);
-  		  }
-  
+            mainth->ticks = 0;
+            enqueue(mainth->idx, HLEVEL);
+          }
+          else {
+            enqueue(mainth->idx, mainth->level);
+          }
         }
         else {
           passval = getpvheap();
-  
           if(mlfqpv < passval || passval == -1)
             passval = mlfqpv;
-  
           heapinsert(mainth->idx, passval);
         }  
       }
@@ -759,7 +752,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
-		mainth->runblenum++;
+        mainth->runblenum++;
         
         if(mainth->runblenum == 1) {
 
@@ -878,7 +871,7 @@ priorityboost(void)
     if (!isfull(HLEVEL) && !isempty(MLEVEL)) {
       idx = dequeue(MLEVEL);
       
-	  p = &ptable.proc[idx];
+      p = &ptable.proc[idx];
 
       p->level = HLEVEL;
       p->ticks = 0;
@@ -892,7 +885,7 @@ priorityboost(void)
     if (!isfull(HLEVEL) && !isempty(LLEVEL)) {
       idx = dequeue(LLEVEL);
 
-	  p = &ptable.proc[idx];
+    p = &ptable.proc[idx];
 
       p->level = HLEVEL;
       p->ticks = 0;
@@ -958,7 +951,7 @@ thread_allocproc(void)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
-	  goto found;
+    goto found;
   
   release(&ptable.lock);
   return 0;
@@ -1036,24 +1029,24 @@ thread_create(thread_t* thread, void* (*start_routine) (void*), void *arg)
 
   for(i = 0; i < NTHREAD; i++) 
     if(mainth->stack[i] != -1)
-	  break;
+    break;
 
   if(i != NTHREAD) {
-	 usp = mainth->stack[i];
-	 th->stackbot = usp;
-	 mainth->stack[i] = -1;
+   usp = mainth->stack[i];
+   th->stackbot = usp;
+   mainth->stack[i] = -1;
   }
   else {
     sz = mainth->sz;
     sz = PGROUNDUP(sz);
-	if( (sz = allocuvm(mainth->pgdir, sz, sz + 2*PGSIZE)) == 0) {
+    if( (sz = allocuvm(mainth->pgdir, sz, sz + 2*PGSIZE)) == 0) {
       kfree(th->kstack);
-	  
+      
       th->kstack = 0;
-	  mainth->prevth = th->prevth;
-	  th->prevth->nextth = mainth;
-	 
-	  th->state = UNUSED;
+      mainth->prevth = th->prevth;
+      th->prevth->nextth = mainth;
+    
+      th->state = UNUSED;
       th->pid = 0;
       th->parent = 0;
       th->join = 0;
@@ -1063,12 +1056,12 @@ thread_create(thread_t* thread, void* (*start_routine) (void*), void *arg)
       th->nextth = 0;
       th->prevth = 0;
       release(&ptable.lock);
-	  return -1;
-	}
-	clearpteu(mainth->pgdir, (char*)(sz - 2*PGSIZE));
+      return -1;
+    }
+    clearpteu(mainth->pgdir, (char*)(sz - 2*PGSIZE));
 
-	usp = sz;
-	mainth->sz = sz;
+    usp = sz;
+    mainth->sz = sz;
     th->stackbot = sz;
   }
   
@@ -1158,20 +1151,19 @@ thread_join (thread_t thread, void ** retval)
   for(;;) {
     exist = 0;
     
-	for(p = cur->nextth; p != cur; p = p->nextth) {
+    for(p = cur->nextth; p != cur; p = p->nextth) {
       if(p->thid != thread || p->join != cur)
-	    continue;
+      continue;
 
       exist = 1;
       if(p->state == ZOMBIE) {
         *retval = p->retval;
         kfree(p->kstack);
         p->kstack = 0;
-        
-		for(i = 0; i < NTHREAD; i++)
+        for(i = 0; i < NTHREAD; i++)
           if(mainth->stack[i] == -1)
-		    break;
-	     
+            break;
+            
         mainth->stack[i] = p->stackbot;
         
         p->pid = 0;
@@ -1182,7 +1174,7 @@ thread_join (thread_t thread, void ** retval)
 
         p->nextth->prevth = p->prevth;
         p->prevth->nextth = p->nextth;
-	    
+      
         p->join = 0;
         p->thid = 0;
         p->mainth = 0;
@@ -1190,14 +1182,14 @@ thread_join (thread_t thread, void ** retval)
         p->prevth = 0;
         
         release(&ptable.lock);
-		return 0;
-	  }
-	}
+        return 0; 
+      }
+    }
 
-	if(!exist) {
+    if(!exist) {
       release(&ptable.lock);
-	  return -1;
-	}
+      return -1;
+    }
     
     sleep(cur, &ptable.lock);
   }
@@ -1212,25 +1204,24 @@ thread_scheduler(void)
   struct proc *cur = myproc();
   
   if(cur->mainth->runblenum == 0) {
-	yield_no_thread();
+    yield_no_thread();
   } 
   else {
     for(p = cur->nextth; p != cur; p = p->nextth) {
       if(p->state != RUNNABLE)
         continue;
       
-        
       p->state = RUNNING;
       p->mainth->runblenum--;
       p->mainth->recentth = p;
       mycpu()->proc = p;
-	  switchuvm(p);
+      switchuvm(p); 
       swtch(&cur->context, p->context);
-	  return;
+      return;
     }
     if(p == cur &&p->state == RUNNABLE) {
       p->state = RUNNING; 
-	  p->mainth->runblenum--;
+      p->mainth->runblenum--;
       p->mainth->recentth = p;
       mycpu()->proc = p;
     }
@@ -1326,8 +1317,8 @@ thread_wakeup1(void *chan)
 
   for(p = cur->nextth; p != cur; p = p->nextth) {
     if(p->state == SLEEPING && p->chan == chan && p == cur->join) { 
-	  p->state = RUNNABLE;
-	  p->mainth->runblenum++;
+      p->state = RUNNABLE;
+      p->mainth->runblenum++;
     }
   }
 }
@@ -1354,8 +1345,8 @@ thread_pick(int idx)
   for(p = recentth->nextth; p != recentth; p = p->nextth) {
     if(p->state == RUNNABLE) {
       mainth->recentth = p;
-	  return p->idx;
-	}
+      return p->idx;
+    }
   }
   
   if(p->state == RUNNABLE) {
