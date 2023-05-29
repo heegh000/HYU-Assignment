@@ -32,5 +32,5 @@ Project 4
 - Project 3에서 구현한 xv6에서, indirect inode를 double indirect inode, triple indirect node까지 확장하여 약 1GB까지 파일을 저장할 수 있게 구현하는 과제입니다.
 - 또한 thread가 race condition 걱정없이 file을 read, write할 수 있는 system call을 구현하는 과제입니다.
 
-- double/triple inode(파일 최대 크기 확장), thread safe file read/write(pread, pwrite) 구현 전 디자인: [Milestone 1](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project4-Milestone1)
-- double/triple inode(파일 최대 크기 확장), thread safe file read/write(pread, pwrite) 구현 후 리포트: [Milestone 2](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project4-Milestone2)
+- double/triple inode(파일 최대 크기 확장) 리포트: [Milestone 1](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project4-Milestone1)
+- thread safe file read/write(pread, pwrite) 리포트: [Milestone 2](https://github.com/heegh000/HYU-Operating-Systems/wiki/Project4-Milestone2)
