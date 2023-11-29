@@ -20,4 +20,4 @@ PA2 Cow roller coaster
 
 Yaw와 Pitch를 이용해 소 Ojbect를 다음 움직일 위치에 맞춰 회전시킵니다.
 
-자세한 구현은 PA2에 [README](https://github.com/heegh000/HYU-Computer-Graphics/blob/master/PA2_2022_2018009234/README.pdf)에 작성되어 있습니다. 
+자세한 구현은 PA2에 [README](https://github.com/heegh000/HYU-Assignment/blob/main/HYU-Computer-Graphics/PA2_2022_2018009234/README.pdf)에 작성되어 있습니다. 
