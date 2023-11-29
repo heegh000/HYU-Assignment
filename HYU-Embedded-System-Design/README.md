@@ -13,4 +13,4 @@ Linetracer
 
 과제는 2개의 Phase로 진행되었으며, Phase 1에서는 미로를 기억하고 Phase 2에서는 기억한 경로를 최적화하여 제한 시간 안에 도착하게 만드는 것이 목표입니다.
 
-제가 작성한 코드는 main.c이며, 구현에 대한 자세한 설명은 [report](https://github.com/heegh000/HYU-Embedded-System-Design/blob/main/report.md)에 작성되어있습니다.
+제가 작성한 코드는 main.c이며, 구현에 대한 자세한 설명은 [report](https://github.com/heegh000/HYU-Assignment/blob/main/HYU-Embedded-System-Design/report.md)에 작성되어있습니다.
